@@ -76,7 +76,7 @@ exports.drink = (memberEmail, volume = "40", type = "Beer") => create('Drinks', 
 exports.execute = function(args) {
   const commandName = args.shift()
   const command = exports[commandName]
-  if (typeof command !== "function" || ['state', 'init', 'execute'].indexOf(command) >= 0) {
+  if (typeof command !== "function" || ['state', 'init', 'execute'].indexOf(commandName) >= 0) {
     console.error(`* Error: Unknown command '${commandName}'`)
     process.exit(1)
   }
@@ -87,7 +87,7 @@ exports.execute = function(args) {
 
   console.info(`* Running command '${commandName}' with args '${args.join(' ')}'`)
 
-  return exports.init()
+  return (commandName === 'list' ? Promise.resolve() : exports.init())
     .then(() => command.apply(null, args))
     .then(result => {
       if (!Array.isArray(result)) result = [result]

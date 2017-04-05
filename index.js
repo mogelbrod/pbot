@@ -47,11 +47,19 @@ function create(table, data) {
 }
 
 function currentSession() {
-  return state.Sessions[state.Sessions.length - 1]
+  const s = state.Sessions[state.Sessions.length - 1]
+  if (!s) {
+    throw new Error(`No sessions found`)
+  }
+  return s
 }
 
 function findMember(email) {
-  return state.Members.find(m => m.get('Email') === email)
+  const m = state.Members.find(m => m.get('Email') === email)
+  if (!m) {
+    throw new Error(`No member with email '${email}'`)
+  }
+  return m
 }
 
 exports.init = () => Promise.all(REQUIRED_TABLES.map(t => list(t)))

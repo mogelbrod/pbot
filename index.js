@@ -6,8 +6,8 @@ const config = require('./config')
 const air = new Airtable({apiKey: config.airtable}).base('appJdrJKPgnOISywb')
 
 const state = exports.state = {
-  Sessions: [],
   Members: [],
+  Sessions: [],
   Drinks: [],
 }
 
@@ -16,17 +16,24 @@ const LIST_ARGS = {
   Sessions: {sort: [{field: 'Start', direction: 'asc'}]}
 }
 
-function list(table, args = LIST_ARGS[table]) {
+function tableName(table) {
+  return table.replace(/^(.)(.+?)s?$/, (_, c, rest) => c.toUpperCase() + rest + 's')
+}
+
+function list(table, args = null) {
+  table = tableName(table)
+  args = LIST_ARGS[table]
   return new Promise((resolve, reject) => {
     air(table).select(args).eachPage((items, next) => {
       state[table] = items
       console.log(`* Got ${items.length} rows from ${table}`)
       resolve(items)
-    })
+    }, err => (err ? reject(err) : null))
   })
 }
 
 function create(table, data) {
+  table = tableName(table)
   return new Promise((resolve, reject) => {
     air(table).create(data, (err, res) => {
       if (err) {

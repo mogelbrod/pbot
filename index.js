@@ -3,7 +3,7 @@
 const slackbots = require('slackbots')
 const Airtable = require('airtable')
 const config = require('./config')
-const air = new Airtable({apiKey: config.airtable}).base('appJdrJKPgnOISywb')
+const air = new Airtable({apiKey: config.key}).base(config.base)
 
 const state = exports.state = {
   Members: [],

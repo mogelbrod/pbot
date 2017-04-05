@@ -4,7 +4,7 @@
 
 1. Get your [Airtable API Key](https://airtable.com/account) and paste it into the config file:
     ```
-    echo '{"airtable": "INSERT AIRTABLE API KEY HERE"}' > config.js
+    echo '{"key": "AIRTABLE API KEY", "base": "appJdrJKPgnOISywb"}' > config.js
     ```
 2. Go nuts:
     ```

@@ -5,19 +5,37 @@ const Airtable = require('airtable')
 const config = require('./config')
 const air = new Airtable({apiKey: config.key}).base(config.base)
 
-const state = exports.state = {
-  Members: [],
-  Sessions: [],
-  Drinks: [],
-}
-
+const TABLES = ['Members', 'Sessions', 'Drinks']
 const REQUIRED_TABLES = ['Sessions', 'Members']
 const LIST_ARGS = {
-  Sessions: {sort: [{field: 'Start', direction: 'asc'}]}
+  Sessions: {sort: [{field: 'Start'}]},
+  Members: {sort: [{field: 'Name'}]},
+  Drinks: {sort: [{field: 'Time'}]},
 }
+
+const state = exports.state = TABLES.reduce((s, table) => (s[table] = [], s), {})
+const commands = exports.commands = []
 
 function tableName(table) {
   return table.replace(/^(.)(.+?)s?$/, (_, c, rest) => c.toUpperCase() + rest + 's')
+}
+
+function format(d) {
+  if (typeof d === "object" && d.fields) {
+    return JSON.stringify(d.fields, null, 2)
+  }
+  return d.toString()
+}
+
+function command(name, dependencies, fn) {
+  if (!fn) {
+    fn = dependencies
+    dependencies = REQUIRED_TABLES
+  }
+  fn.dependencies = dependencies
+  exports[name] = fn
+  exports.commands.push(name)
+  return fn
 }
 
 function list(table, args = null) {
@@ -30,6 +48,10 @@ function list(table, args = null) {
       resolve(items)
     }, err => (err ? reject(err) : null))
   })
+}
+
+function reload(...tables) {
+  return Promise.all(tables.map(t => list(t)))
 }
 
 function create(table, data) {
@@ -46,15 +68,17 @@ function create(table, data) {
   })
 }
 
-function currentSession() {
-  const s = state.Sessions[state.Sessions.length - 1]
+function session(index = "-1") {
+  index = parseInt(index, 10)
+  if (index < 0) index += state.Sessions.length
+  const s = state.Sessions[index]
   if (!s) {
     throw new Error(`No sessions found`)
   }
   return s
 }
 
-function findMember(email) {
+function member(email) {
   const m = state.Members.find(m => m.get('Email') === email)
   if (!m) {
     throw new Error(`No member with email '${email}'`)
@@ -62,29 +86,59 @@ function findMember(email) {
   return m
 }
 
-exports.init = () => Promise.all(REQUIRED_TABLES.map(t => list(t)))
-exports.currentSession = currentSession
-exports.findMember = findMember
+command('session', ['Sessions'], session)
+command('member', ['Members'], member)
+command('list', [], list)
+command('reload', [], reload)
+for (let table of TABLES) {
+  command(table.toLowerCase(), [], () => list(table))
+}
 
-exports.list = list
-
-exports.start = (location = "Unknown") => create('Sessions', {
+command('start', (location = "Unknown") => create('Sessions', {
   Start: new Date().toISOString(),
   Location: location,
-})
+}))
 
-exports.drink = (memberEmail, volume = "40", type = "Beer") => create('Drinks', {
+command('drink', (memberEmail, volume = "40", type = "Beer") => create('Drinks', {
   Time: new Date().toISOString(),
-  Session: [currentSession().getId()],
-  Member: [findMember(memberEmail).getId()],
+  Session: [session().getId()],
+  Member: [member(memberEmail).getId()],
   Volume: parseInt(volume, 10),
   Type: type,
+}))
+
+command('help', [], () => {
+  return `* Available commands:\n` + exports.commands
+    .sort((a, b) => a.localeCompare(b))
+    .map(cmd => {
+      // Ugly and not at all guaranteed to work, but still fun :)
+      const args = exports[cmd].toString()
+        .replace(/^function[^(]*/, '')
+        .replace(/(\s*=>\s*|{)[\s\S]+/, '')
+        .replace(/^\s*\(|\)\s*$/g, '')
+        .split(/\s*,\*/)
+        .join(', ')
+      return `  ${cmd}(${args})`
+    }).join("\n")
 })
 
 exports.execute = function(args) {
   const commandName = args.shift()
+
+  // if (parseInt(commandName, 10) == commandName) {
+    // args.unshift(commandName)
+    // commandName = "drink"
+  // }
+
+  if (!commandName) {
+    console.error(`* Usage: pbot COMMAND [ARGS...]}`)
+    console.error(`* Available commands:`)
+    process.exit(1)
+  }
+
   const command = exports[commandName]
-  if (typeof command !== "function" || ['state', 'init', 'execute'].indexOf(commandName) >= 0) {
+
+  if (exports.commands.indexOf(commandName) < 0 || typeof command !== "function") {
     console.error(`* Error: Unknown command '${commandName}'`)
     process.exit(1)
   }
@@ -93,13 +147,11 @@ exports.execute = function(args) {
     process.exit(1)
   }
 
-  console.info(`* Running command '${commandName}' with args '${args.join(' ')}'`)
-
-  return (commandName === 'list' ? Promise.resolve() : exports.init())
+  return (reload(...command.dependencies))
     .then(() => command.apply(null, args))
     .then(result => {
       if (!Array.isArray(result)) result = [result]
-      console.log(result.map(r => JSON.stringify(r.fields, null, 2)).join("\n\n"))
+      console.log(result.map(format).join("\n\n"))
     })
     .catch(err => {
       console.error("* Error:\n" + err)

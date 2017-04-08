@@ -6,14 +6,31 @@ const b = new backend.Backend(config)
 
 const commands = exports.commands = []
 
-function format(d) {
-  const t = typeof d
-  if (t === "object" && d.fields) {
-    const prefix = typeof d.getId === "function" ? d.getId() + " = " : ""
-    return prefix + JSON.stringify(d.fields, null, 2)
-  } else if (d != null) {
-    return d.toString()
+const DRINK_TYPES = {
+  Beer: {
+    emoji: "🍺",
+    multiplier: 1.0,
+  },
+  Wine: {
+    emoji: "🍷",
+    multiplier: 2.0,
+  },
+  Unknown: {
+    emoji: "🍼",
+    multiplier: 1.0,
+  },
+}
+
+function toDrinkType(drink) {
+  if (typeof drink === "object") {
+    drink = drink.Type
   }
+  return DRINK_TYPES[drink] || DRINK_TYPES.Unknown
+}
+
+function format(d) {
+  const prefix = (typeof d === "object" && d._id) ? d._id + " = " : ""
+  return prefix + JSON.stringify(d, null, 2)
 }
 
 function command(name, fn) {
@@ -38,12 +55,12 @@ function member(query) {
   query = query.toLowerCase()
   const fields = ['Name', 'Email']
   return b.table("Members").then(members => {
-    const matched = members.filter(m => fields.some(f => m.get(f).indexOf(query) >= 0))
+    const matched = members.filter(m => fields.some(f => m[f].toLowerCase().indexOf(query) >= 0))
     switch (matched.length) {
       case 0: throw new Error(`No member matching query '${query}'`)
       case 1: return matched[0]
     }
-    const which = matched.map(m => m.get('Email')).join(', ')
+    const which = matched.map(m => m.Email).join(', ')
     throw new Error(`Multiple members matching '${query}': ${which}`)
   })
 }
@@ -63,14 +80,14 @@ command("start", (location = "Unknown") => b.create('Sessions', {
 
 command("drink", (memberEmail, volume = "40", type = "Beer") => b.create('Drinks', {
   Time: new Date().toISOString(),
-  Session: [session().getId()],
-  Member: [member(memberEmail).getId()],
+  Session: [session()._id],
+  Member: [member(memberEmail)._id],
   Volume: parseInt(volume, 10),
   Type: type,
 }))
 
 command("sum", (what = "-1") => {
-  const isSession = what.indexOf('@') < 0
+  const isSession = what == parseInt(what, 10)
   return Promise.all([
     isSession ? session(what) : member(what),
     b.table('Members'),
@@ -78,28 +95,33 @@ command("sum", (what = "-1") => {
     const parent = res[0]
     const members = res[1]
     return b.table("Drinks", {
-      filterByFormula: `${b.type(parent)} = '${b.normalizeDate(parent.get('Start'))}'`,
+      filterByFormula: `${parent._type} = '${b.normalizeDate(parent.Start)}'`,
     }).then(drinks => {
       // TODO
       const partitions = drinks.reduce((memo, drink) => {
-        const key = drink.fields[isSession ? 'Members' : 'Sessions'][0]
+        const key = drink[isSession ? 'Members' : 'Sessions'][0]
         if (!memo[key]) {
           memo[key] = []
           memo[key].Value = 0
           memo[key].Key = key
-          memo[key].Entity = members.find(member => member.getId() === key)
-          console.log(memo[key])
+          memo[key].Entity = members.find(member => member._id === key)
         }
         memo[key].push(drink)
-        memo[key].Value += drink.fields.Volume
+        memo[key].Value += drink.Volume * toDrinkType(drink).multiplier
         return memo
       }, {})
 
-      const ranked = Object.keys(partitions)
+      return Object.keys(partitions)
         .map(key => partitions[key])
         .sort((a, b) => b.Value - a.Value)
-
-      return ranked
+        .map(row => [
+          row.Entity.Name,
+          row.Value,
+          row.map(drink => {
+            const type = toDrinkType(drink)
+            return drink.Volume + type.emoji
+          }).join('  ')
+        ])
     })
   })
 })

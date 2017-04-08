@@ -34,13 +34,17 @@ function session(index = "-1") {
   })
 }
 
-function member(email) {
+function member(query) {
+  query = query.toLowerCase()
+  const fields = ['Name', 'Email']
   return b.table("Members").then(members => {
-    const m = members.find(m => m.get("Email") === email)
-    if (!m) {
-      throw new Error(`No member with email '${email}'`)
+    const matched = members.filter(m => fields.some(f => m.get(f).indexOf(query) >= 0))
+    switch (matched.length) {
+      case 0: throw new Error(`No member matching query '${query}'`)
+      case 1: return matched[0]
     }
-    return m
+    const which = matched.map(m => m.get('Email')).join(', ')
+    throw new Error(`Multiple members matching '${query}': ${which}`)
   })
 }
 

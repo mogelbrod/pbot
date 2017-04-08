@@ -1,6 +1,5 @@
 #!/usr/bin/env node
-// const promisify = require('js-promisify')
-const slackbots = require("slackbots")
+// const slackbots = require("slackbots")
 const backend = require("./lib/backend")
 const config = require("./config")
 const b = new backend.Backend(config)
@@ -19,7 +18,7 @@ function format(d) {
 
 function command(name, fn) {
   exports[name] = fn
-  exports.commands.push(name)
+  commands.push(name)
   return fn
 }
 
@@ -102,7 +101,7 @@ command("sum", (what = "-1") => {
 })
 
 command("help", () => {
-  const cmds = exports.commands
+  const cmds = commands
     .sort((a, b) => a.localeCompare(b))
     .map(cmd => {
       // Ugly and not at all guaranteed to work, but still fun :)
@@ -114,26 +113,20 @@ command("help", () => {
         .join(", ")
       return `  ${cmd}(${args})`
     }).join("\n")
-  return `* Available commands:\n${cmds}`
+  return `* Usage: pbot COMMAND [ARGS...]\n* Available commands:\n${cmds}`
 })
 
 exports.execute = function(args) {
-  const commandName = args.shift()
+  const commandName = args.shift() || "help"
 
   // if (parseInt(commandName, 10) == commandName) {
     // args.unshift(commandName)
     // commandName = "drink"
   // }
 
-  if (!commandName) {
-    console.error(`* Usage: pbot COMMAND [ARGS...]}`)
-    console.error(`* Available commands:`)
-    process.exit(1)
-  }
-
   const command = exports[commandName]
 
-  if (exports.commands.indexOf(commandName) < 0 || typeof command !== "function") {
+  if (commands.indexOf(commandName) < 0 || typeof command !== "function") {
     console.error(`* Error: Unknown command '${commandName}'`)
     process.exit(1)
   }

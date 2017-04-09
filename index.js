@@ -1,16 +1,17 @@
 #!/usr/bin/env node
 const {Backend} = require("./lib/backend")
-const Commands = require("./lib/commands")
+const commands = require("./lib/commands")
 const format = require("./lib/format")
 const config = require("./config")
 
 const args = process.argv.slice(2)
-const backend = new Backend(config)
-const commands = new Commands(backend)
+const log = (...args) => console.log(format.log(...args))
+
+const backend = new Backend(Object.assign({log}, config))
 
 // CLI mode
 if (require.main === module && args[0] !== "run") {
-  commands.execute(args).then(res => {
+  commands.execute.call({backend, log}, args).then(res => {
     if (!Array.isArray(res)) res = [res]
     console.log(res.map(d => {
       const t = typeof d
@@ -19,8 +20,8 @@ if (require.main === module && args[0] !== "run") {
     }).join("\n\n"))
     process.exit(0)
   }).catch(err => {
-    console.error("* Error:\n" + err.stack)
-    if (err.inputData) console.error("* Input data was:\n" + JSON.stringify(err.inputData, null, 2))
+    log("Error:", (err.stack || err))
+    if (err.inputData) log("Input data was:", err.inputData)
     process.exit(1)
   })
   return
@@ -29,8 +30,8 @@ if (require.main === module && args[0] !== "run") {
 // Bot server mode
 const bot = require("./lib/bot")({
   token: config.slackToken,
-  defaultChannel: "test",
+  defaultChannel: "C4WM49V1A",
+  execute: commands.execute,
   backend,
-  commands,
-  log: (...args) => console.log(format.log(...args))
+  log,
 })

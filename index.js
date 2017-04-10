@@ -10,7 +10,7 @@ const log = (...args) => console.log(format.log(...args))
 const backend = new Backend(Object.assign({log}, config))
 
 // CLI mode
-if (require.main === module && args[0] !== "run") {
+if (require.main === module && args[0] !== "bot") {
   format.basicOutput = ["1", "true"].indexOf(process.env.FANCY) < 0
   commands.execute.call({backend, log}, args).then(res => {
     console.log(format.fancy(res))

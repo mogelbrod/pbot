@@ -12,12 +12,7 @@ const backend = new Backend(Object.assign({log}, config))
 // CLI mode
 if (require.main === module && args[0] !== "run") {
   commands.execute.call({backend, log}, args).then(res => {
-    if (!Array.isArray(res)) res = [res]
-    console.log(res.map(d => {
-      const t = typeof d
-      const prefix = (t === "object" && d._id) ? d._id + " = " : ""
-      return prefix + (t === "string" ? d : JSON.stringify(d, null, 2))
-    }).join("\n\n"))
+    console.log(format.fancy(res))
     process.exit(0)
   }).catch(err => {
     log("Error:", (err.stack || err))

@@ -11,6 +11,7 @@ const backend = new Backend(Object.assign({log}, config))
 
 // CLI mode
 if (require.main === module && args[0] !== "run") {
+  format.basicOutput = ["1", "true"].indexOf(process.env.FANCY) < 0
   commands.execute.call({backend, log}, args).then(res => {
     console.log(format.fancy(res))
     process.exit(0)

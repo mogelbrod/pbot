@@ -10,6 +10,7 @@
   "license": "ISC",
   "dependencies": {
     "airtable": "^0.4.5",
+    "backo": "^1.1.0",
     "slackbots": "^1.0.2"
   }
 }

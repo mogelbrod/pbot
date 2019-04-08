@@ -18,6 +18,6 @@
     node . bot
     # or via CLI access:
     node . start "Imaginary Pub"
-    node . drink user 40 Beer
+    node . drink 40 Beer user
     ```
 

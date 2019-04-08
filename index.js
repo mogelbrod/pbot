@@ -12,9 +12,15 @@ const backend = new Backend(Object.assign({log}, config))
 // CLI mode
 if (require.main === module && args[0] !== "bot") {
   format.basicOutput = ["1", "true"].indexOf(process.env.FANCY) < 0
-  commands.execute.call({backend, log}, args).then(res => {
-    console.log(format.fancy(res))
-    process.exit(0)
+
+  function output(res) {
+    return console.log(format.fancy(res))
+  }
+
+  const context = { backend, log, output }
+
+  commands.execute.call(context, args).then(res => {
+    output(res)
   }).catch(err => {
     log("Error:", (err.stack || err))
     if (err.inputData) log("Input data was:", err.inputData)

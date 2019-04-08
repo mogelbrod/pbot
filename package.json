@@ -11,9 +11,9 @@
   "license": "ISC",
   "repository": "git+https://github.com/mogelbrod/pbot.git",
   "dependencies": {
-    "airtable": "^0.5.6",
+    "airtable": "^0.5.10",
     "backo": "^1.1.0",
     "ms": "^2.1.1",
-    "slackbots": "^1.1.0"
+    "slackbots": "^1.2.0"
   }
 }

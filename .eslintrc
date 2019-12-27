@@ -36,7 +36,7 @@
     "no-useless-return": 2,
     "no-var": 2,
     "object-shorthand": 2,
-    "quotes": [2, "double", { "allowTemplateLiterals": true }],
+    "quotes": [2, "single", { "allowTemplateLiterals": true }],
     "radix": 2,
     "semi": [2, "never"],
     "space-before-blocks": 2,

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 const path = require('path')
-const {Backend} = require('./lib/backend')
+const { Backend } = require('./lib/backend')
 const commands = require('./lib/commands')
 const format = require('./lib/format')
 
@@ -29,7 +29,7 @@ while (args[0] && (optionMatch = args[0].match(/--(\w+)(?:=(.*))/))) {
 }
 
 const config = require(path.resolve(options.config))
-const backend = new Backend(Object.assign({log}, config))
+const backend = new Backend(Object.assign({ log }, config))
 
 function log(...args) {
   console.log(format.log(...args))

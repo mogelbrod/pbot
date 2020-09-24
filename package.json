@@ -7,8 +7,7 @@
   "repository": "git+https://github.com/mogelbrod/pbot.git",
   "main": "index.js",
   "scripts": {
-    "start": "node .",
-    "bot": "node . bot",
+    "start": "node . bot",
     "lint": "eslint . --fix",
     "lint-staged": "lint-staged",
     "test": "mocha"

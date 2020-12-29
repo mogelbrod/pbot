@@ -8,7 +8,7 @@ const args = process.argv.slice(2)
 
 // Available options (with defaults)
 const options = {
-  config: 'config.json',
+  config: './config.json',
   fancy: false,
 }
 

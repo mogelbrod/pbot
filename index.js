@@ -15,7 +15,7 @@ const options = {
 // Parse leading `--option(=value)` flags into `options` object
 let optionMatch
 while (args[0] && (optionMatch = args[0].match(/--(\w+)(?:=(.*))/))) {
-  let option = optionMatch[1]
+  const option = optionMatch[1]
   let value = optionMatch[2]
   switch (typeof options[option]) {
     case 'undefined':
@@ -56,7 +56,7 @@ if (require.main === module && args[0] !== 'bot') {
 }
 
 // Bot server mode
-const bot = require('./lib/bot')({
+/*const bot =*/ require('./lib/bot')({
   token: config.slackToken,
   defaultChannel: 'C4WM49V1A',
   execute: commands.execute,

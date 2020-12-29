@@ -17,10 +17,7 @@
     "test"
   ],
   "lint-staged": {
-    "*.js": [
-      "eslint . --fix",
-      "git add"
-    ]
+    "*.js": ["eslint . --fix"]
   },
   "dependencies": {
     "airtable": "^0.10.1",

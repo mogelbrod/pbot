@@ -10,7 +10,10 @@
     "start": "node . bot",
     "lint": "eslint . --fix",
     "lint-staged": "lint-staged",
-    "test": "mocha"
+    "test": "mocha",
+    "service-install": "./install-system-service.sh",
+    "service-logs": "journalctl --user -u pbot.service",
+    "service-restart": "systemctl --user restart pbot"
   },
   "pre-commit": [
     "lint-staged",

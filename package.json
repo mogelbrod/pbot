@@ -20,10 +20,12 @@
     "test"
   ],
   "lint-staged": {
-    "*.js": ["eslint . --fix"]
+    "*.js": [
+      "eslint . --fix"
+    ]
   },
   "dependencies": {
-    "airtable": "^0.10.1",
+    "airtable": "^0.11.2",
     "backo": "^1.1.0",
     "ms": "^2.1.3",
     "node-fetch": "^2.6.7",

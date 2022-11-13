@@ -1,0 +1,65 @@
+1006
+[2017-08-25 05:38:42] 1006
+[2017-08-25 05:38:42] Connection closed, attempting to reconnect in 60000ms
+
+events.js:160
+throw er; // Unhandled 'error' event
+^
+
+Error: getaddrinfo ENOTFOUND mpmulti-28c0.slack-msgs.com mpmulti-28c0.slack-msgs.com:443 at errnoException (dns.js:28:10)
+
+
+
+
+[2018-03-14 05:30:41] Connection closed, attempting to reconnect in 60000ms
+events.js:160
+throw er; // Unhandled 'error' event
+^
+
+Error: getaddrinfo ENOTFOUND cerberus-xxxx.lb.slack-msgs.com cerberus-xxxx.lb.slack-msgs.com:443
+
+Error: getaddrinfo EAI_AGAIN cerberus-xxxx.lb.slack-msgs.com:443
+    at Object.exports._errnoException (util.js:1020:11)
+    at errnoException (dns.js:33:15)
+    at GetAddrInfoReqWrap.onlookup [as oncomplete] (dns.js:76:26)
+
+
+[2019-09-18 08:11:14] Error: Error: getaddrinfo EAI_AGAIN slack.com slack.com:443
+  at _api.then.fail (/home/victor/src/pbot/node_modules/slackbots/index.js:46:33)
+  at Array.<anonymous> (/home/victor/src/pbot/node_modules/vow/lib/vow.js:773:56)
+  at callFns (/home/victor/src/pbot/node_modules/vow/lib/vow.js:24:35)
+  at process._tickCallback (internal/process/next_tick.js:61:11)
+
+
+1006
+[2018-04-12 01:49:02] 1006
+[2018-04-12 01:49:02] Connection closed, attempting to reconnect in 50ms
+events.js:160
+throw er; // Unhandled 'error' event
+^
+
+Error: connect EHOSTUNREACH 35.177.112.203:443
+    at Object.exports._errnoException (util.js:1020:11)
+    at exports._exceptionWithHostPort (util.js:1043:20)
+
+
+
+[2020-09-18 22:09:36] Connected
+[2020-09-19 06:29:14] Connection closed, attempting to reconnect in 50ms
+[2020-09-19 06:29:14]
+[2020-09-19 06:29:14] Connected
+[2020-09-19 14:42:10] Connection closed, attempting to reconnect in 50ms
+[2020-09-19 14:42:10]
+[2020-09-19 14:42:11] Connected
+[2020-09-19 18:07:25] No messages received since 6:06:25 PM, triggering reconnect
+/home/victor/src/pbot/node_modules/ws/lib/WebSocket.js:219
+    else throw new Error('not opened');
+         ^
+
+Error: not opened
+    at WebSocket.send (/home/victor/src/pbot/node_modules/ws/lib/WebSocket.js:219:16)
+    at Timeout._onTimeout (/home/victor/src/pbot/node_modules/ws-heartbeat/client.js:19:12)
+    at ontimeout (timers.js:427:11)
+    at tryOnTimeout (timers.js:289:5)
+    at listOnTimeout (timers.js:252:5)
+    at Timer.processTimers (timers.js:212:10)

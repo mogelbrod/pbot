@@ -3,6 +3,7 @@
     "module": "commonjs",
     "target": "es6",
     "allowJs": true,
+    "checkJs": true,
     "moduleResolution": "node",
     "esModuleInterop": true,
     "resolveJsonModule": true,

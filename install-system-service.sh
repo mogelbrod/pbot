@@ -1,9 +1,17 @@
 #!/bin/bash -e
 
 SERVICE=pbot.service
+SERVICE_DIR="$HOME/.config/systemd/user"
+
+if [ -d "$SERVICE_DIR" ]; then
+  echo "==== Service definition exists"
+else
+  echo "==== Creating $SERVICE_DIR"
+  mkdir -p "$SERVICE_DIR"
+fi
 
 echo "==== Create service definition"
-sed -e "s#{root}#$(pwd)#g" > ~/.config/systemd/user/$SERVICE <<EOF
+sed -e "s#{root}#$(pwd)#g" > "$SERVICE_DIR/$SERVICE" <<EOF
 [Unit]
 Description=Powerbaers slack bot
 After=network.target

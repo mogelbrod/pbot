@@ -70,8 +70,8 @@ import(configPath, { with: { type: 'json' } }).then((configModule) => {
   // Bot server mode
   import('./lib/bot.js').then(({ startBot }) =>
     startBot({
-      token: config.slackToken,
-      defaultChannel: 'C4WM49V1A',
+      token: config.discordToken,
+      defaultChannel: config.discordDefaultChannel,
       execute,
       backend,
       log,

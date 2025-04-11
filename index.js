@@ -6,7 +6,6 @@ import { execute } from './lib/commands.js'
 import * as format from './lib/format.js'
 
 const args = process.argv.slice(2)
-const isMainModule = process.argv[1] === fileURLToPath(import.meta.url)
 
 // Available options (with defaults)
 const options = {
@@ -45,7 +44,7 @@ import(configPath, { with: { type: 'json' } }).then((configModule) => {
   const backend = new Backend(Object.assign({ log }, config))
 
   // CLI mode
-  if (isMainModule && args[0] !== 'bot') {
+  if (args[0] !== 'bot') {
     format.setFancy(options.fancy)
 
     function output(res) {
@@ -70,8 +69,8 @@ import(configPath, { with: { type: 'json' } }).then((configModule) => {
   // Bot server mode
   import('./lib/bot.js').then(({ startBot }) =>
     startBot({
-      token: config.slackToken,
-      defaultChannel: 'C4WM49V1A',
+      token: config.discordToken,
+      defaultChannel: config.discordDefaultChannel,
       execute,
       backend,
       log,

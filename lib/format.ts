@@ -68,7 +68,7 @@ export function fancy(v: any, depth = 0): string {
         '',
       )
       return (
-        `[💵 ${v.price_level || '?'} ⭐️ ${toFixed(v.rating, 1, '???')}] ` +
+        `[💵 ${v.price_level || '?'} ⭐️ ${toFixed(v.rating, 1, '?')}] ` +
         bold(linkify(v.name, placeURL(v.name, v.place_id))) +
         (address ? ` (${address})` : '') +
         (v.Session ? ` 🗓 ${date(v.Session.Start)}` : '')
@@ -208,7 +208,9 @@ export function DiscordTag(value: string) {
   }
 }
 
-export function addType(objectOrArray: any[] | Record<string, any>, type: any) {
+type Obj = Record<string, any>
+
+export function addType<T extends Obj | Obj[]>(objectOrArray: T, type: any): T {
   if (Array.isArray(objectOrArray)) {
     objectOrArray.forEach((obj) => addType(obj, type))
   } else if (objectOrArray && typeof objectOrArray === 'object') {

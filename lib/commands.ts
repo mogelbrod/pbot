@@ -1,6 +1,6 @@
 import ms from 'ms'
 import * as f from './format.js'
-import { findPlace, searchPlaces } from './google-places.js'
+import { findPlaces, searchPlaces } from './google-places.js'
 import type { Backend, Config, User } from './types.js'
 import type { GuildMember } from 'discord.js'
 
@@ -160,15 +160,15 @@ command('start', 'Begins a new session', function (location = 'Unknown') {
     Start: new Date().toISOString(),
     Location: location,
   }
-  return findPlace(location, {
+  return findPlaces(location, {
     googlePlacesKey: this.config.googlePlacesKey,
   })
     .catch((error) => {
       this.output(error)
       return null
     })
-    .then((place) => {
-      session = this.backend.placeToSession(place, session)
+    .then((places) => {
+      session = this.backend.placeToSession(places[0], session)
       return this.backend.create('Sessions', session)
     })
     .then((res) => {
@@ -357,11 +357,34 @@ command(
   },
 )
 
-command('place', 'Displays info for a given Google place', function (query) {
-  return findPlace(query, {
-    googlePlacesKey: this.config.googlePlacesKey,
-  })
-})
+command(
+  'place',
+  'Displays info for a given Google place',
+  async function (query) {
+    const [sessions, places] = await Promise.all([
+      this.backend.table('Sessions'),
+      findPlaces(query, { googlePlacesKey: this.config.googlePlacesKey }),
+    ])
+    const place = places[0]
+    const rows: any = []
+    for (const session of sessions) {
+      if (session.GooglePlaceID !== place.place_id) continue
+      rows.push(['🗓', new Date(session.Start)])
+    }
+
+    rows.unshift([
+      f.wrap(
+        '*',
+        rows.length
+          ? `${rows.length} session(s) at this place:`
+          : `No sessions at this place`,
+      ),
+    ])
+
+    rows.unshift(place)
+    return rows
+  },
+)
 
 command('maintenance', 'Runs various maintenance tasks', function () {
   this.output('Running maintenance tasks')
@@ -388,14 +411,14 @@ command('maintenance', 'Runs various maintenance tasks', function () {
       }
 
       // Only lookup place if not yet mapped
-      const placePromise = session.GooglePlaceID
+      const placesPromise = session.GooglePlaceID
         ? Promise.resolve()
-        : findPlace(query, {
+        : findPlaces(query, {
             googlePlacesKey: this.config.googlePlacesKey,
           })
 
-      return placePromise.then((place) => {
-        session = this.backend.placeToSession(place, session)
+      return placesPromise.then((places) => {
+        session = this.backend.placeToSession(places[0], session)
         return this.backend.updateRecord(session)
       })
     })

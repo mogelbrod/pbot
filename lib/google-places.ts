@@ -5,6 +5,13 @@ import { addType } from './format.js'
 export const TYPE = 'GooglePlace'
 const DEFAULT_LOCATION = '59.343,18.05'
 
+export interface GooglePlace {
+  _type: typeof TYPE
+  place_id: string
+  formatted_address: string
+  name: string
+}
+
 /**
  * Returns 0 or more places given a query, location & radius.
  *
@@ -21,20 +28,18 @@ const DEFAULT_LOCATION = '59.343,18.05'
  * @return Promise resolving to best candidate if returnFirst=true,
  *         otherwise an array with candidates
  */
-export function findPlace(
+export async function findPlaces(
   query: string,
   {
     googlePlacesKey,
-    returnFirst = true,
     location = DEFAULT_LOCATION,
     radius = 5000,
   }: {
     googlePlacesKey: string
-    returnFirst?: boolean
     location?: string
     radius?: number
   },
-): Promise<any> {
+): Promise<GooglePlace[]> {
   assertKey(googlePlacesKey)
 
   const url =
@@ -46,18 +51,14 @@ export function findPlace(
       fields: 'place_id,name,formatted_address',
       key: googlePlacesKey,
     })
-  return fetch(url)
-    .then((res) => res.json())
-    .then((json: any) => {
-      // Error handling
-      if (json.status !== 'OK' && json.status !== 'ZERO_RESULTS') {
-        throw Object.assign(new Error(`findPlace: Got status ${json.status}`), {
-          inputData: { returnFirst, location, radius },
-        })
-      }
-
-      return addType(returnFirst ? json.candidates[0] : json.candidates, TYPE)
+  const res = await fetch(url)
+  const json: any = await res.json()
+  if (json.status !== 'OK' && json.status !== 'ZERO_RESULTS') {
+    throw Object.assign(new Error(`findPlace: Got status ${json.status}`), {
+      inputData: { location, radius },
     })
+  }
+  return addType(json.candidates, TYPE)
 }
 
 /**

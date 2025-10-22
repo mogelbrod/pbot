@@ -4,6 +4,7 @@ import {
   Events,
   GatewayIntentBits,
   GuildMember,
+  Partials,
 } from 'discord.js'
 import * as format from './format.js'
 import type { CommandContext } from './commands.js'
@@ -29,7 +30,9 @@ export function startBot(cfg: {
       GatewayIntentBits.GuildMessages,
       GatewayIntentBits.GuildMembers,
       GatewayIntentBits.MessageContent,
+      GatewayIntentBits.DirectMessages,
     ],
+    partials: [Partials.Channel, Partials.Message],
   })
 
   client.once(Events.ClientReady, () => {
@@ -59,7 +62,7 @@ export function startBot(cfg: {
     if (!isMentioned && !isDM) return
 
     // Remove bot mention from message content
-    const input = (prefix[2] ?? message.content).trim()
+    const input = (prefix?.[2] ?? message.content).trim()
 
     log(`Executing '${input}' triggered by ${message.author.username}`)
 

@@ -8,14 +8,17 @@ import {
 import * as format from './format.js'
 import type { CommandContext } from './commands.js'
 
-export function startBot(
-  cfg: any,
-): (channelId: string, content: string) => Promise<void> {
+export function startBot(cfg: {
+  token: string
+  defaultChannel?: string
+  context: CommandContext
+  execute: (this: CommandContext, input: string) => Promise<string>
+}): (channelId: string, content: string) => Promise<void> {
   if (typeof cfg !== 'object') {
     throw new Error('A config must be provided')
   }
 
-  const log = cfg.log || ((...args: any[]) => console.log(...args))
+  const log = cfg.context.log || ((...args: any[]) => console.log(...args))
   let users: GuildMember[] = []
 
   log('Starting PBot')
@@ -93,6 +96,7 @@ export function startBot(
     }
 
     const context = {
+      ...cfg.context,
       event: message,
       users,
       user: {
@@ -101,7 +105,6 @@ export function startBot(
         displayName: message.member?.nickname || message.author.displayName,
       },
       output,
-      ...cfg,
     } satisfies CommandContext
 
     try {

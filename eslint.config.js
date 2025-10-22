@@ -23,6 +23,7 @@ export default defineConfig(
       '@typescript-eslint/no-unsafe-member-access': 0,
       '@typescript-eslint/no-unsafe-return': 0,
       '@typescript-eslint/prefer-promise-reject-errors': 0,
+      '@typescript-eslint/unbound-method': 0,
       '@typescript-eslint/no-unused-vars': [
         2,
         { argsIgnorePattern: '^_', ignoreRestSiblings: true, args: 'none' },

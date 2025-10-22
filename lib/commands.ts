@@ -1,19 +1,17 @@
 import ms from 'ms'
 import * as f from './format.js'
 import { findPlace, searchPlaces } from './google-places.js'
-import type { Backend } from './backend.js'
-
-export interface User {
-  id: string
-  name: string
-  displayName?: string
-}
+import type { Backend, Config, User } from './types.js'
+import type { GuildMember } from 'discord.js'
 
 export interface CommandContext {
+  config: Config
   backend: Backend
   log: (...args: any[]) => void
   output: (result: any) => void
+  event?: unknown
   user?: User
+  users?: GuildMember[]
 }
 
 export type CommandFn = (this: CommandContext, ...args: string[]) => any
@@ -163,7 +161,7 @@ command('start', 'Begins a new session', function (location = 'Unknown') {
     Location: location,
   }
   return findPlace(location, {
-    googlePlacesKey: this.backend.config.googlePlacesKey,
+    googlePlacesKey: this.config.googlePlacesKey,
   })
     .catch((error) => {
       this.output(error)
@@ -316,7 +314,7 @@ command(
     return Promise.all([
       this.backend.table('Sessions'),
       searchPlaces(query, {
-        googlePlacesKey: this.backend.config.googlePlacesKey,
+        googlePlacesKey: this.config.googlePlacesKey,
         targetCount: resultsInt,
         minPrice: +minPrice,
         maxPrice: +maxPrice,
@@ -361,7 +359,7 @@ command(
 
 command('place', 'Displays info for a given Google place', function (query) {
   return findPlace(query, {
-    googlePlacesKey: this.backend.config.googlePlacesKey,
+    googlePlacesKey: this.config.googlePlacesKey,
   })
 })
 
@@ -393,7 +391,7 @@ command('maintenance', 'Runs various maintenance tasks', function () {
       const placePromise = session.GooglePlaceID
         ? Promise.resolve()
         : findPlace(query, {
-            googlePlacesKey: this.backend.config.googlePlacesKey,
+            googlePlacesKey: this.config.googlePlacesKey,
           })
 
       return placePromise.then((place) => {

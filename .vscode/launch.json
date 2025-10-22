@@ -5,13 +5,15 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "Start bot",
       "type": "node",
       "request": "launch",
-      "name": "Start bot",
+      "runtimeExecutable": "tsx",
+      "console": "internalConsole",
       "skipFiles": [
         "<node_internals>/**"
       ],
-      "program": "${workspaceFolder}/index.js",
+      "program": "${workspaceFolder}/index.ts",
       "args": [
         "bot"
       ]

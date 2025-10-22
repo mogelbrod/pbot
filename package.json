@@ -9,6 +9,7 @@
   "type": "module",
   "scripts": {
     "start": "tsx . bot",
+    "check": "tsc --noEmit",
     "lint": "eslint . --fix",
     "lint-staged": "lint-staged",
     "test": "mocha",

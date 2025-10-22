@@ -22,7 +22,7 @@ AssertPathExists={root}
 Restart=always
 RestartSec=10
 WorkingDirectory={root}
-ExecStart=/usr/bin/env node {root}/index.js bot
+ExecStart=/usr/bin/env npm start
 
 [Install]
 WantedBy=default.target

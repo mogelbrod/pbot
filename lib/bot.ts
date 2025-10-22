@@ -1,14 +1,22 @@
-import { ChannelType, Client, Events, GatewayIntentBits } from 'discord.js'
+import {
+  ChannelType,
+  Client,
+  Events,
+  GatewayIntentBits,
+  GuildMember,
+} from 'discord.js'
 import * as format from './format.js'
+import type { CommandContext } from './commands.js'
 
-export function startBot(cfg) {
+export function startBot(
+  cfg: any,
+): (channelId: string, content: string) => Promise<void> {
   if (typeof cfg !== 'object') {
     throw new Error('A config must be provided')
   }
 
-  const log = cfg.log || ((...args) => console.log(...args))
-  /** @type {import('discord.js').GuildMember[]} */
-  let users = []
+  const log = cfg.log || ((...args: any[]) => console.log(...args))
+  let users: GuildMember[] = []
 
   log('Starting PBot')
 
@@ -24,7 +32,7 @@ export function startBot(cfg) {
   client.once(Events.ClientReady, () => {
     log(`Connected as ${client.user.tag}`)
     client.guilds.cache.forEach((guild) => {
-      guild.members.fetch().then((members) => {
+      void guild.members.fetch().then((members) => {
         log(`Retrieved ${members.size} users from ${guild.name}`)
         users = [...members.values()]
       })
@@ -52,9 +60,9 @@ export function startBot(cfg) {
 
     log(`Executing '${input}' triggered by ${message.author.username}`)
 
-    message.channel.sendTyping()
+    void message.channel.sendTyping()
 
-    const output = async (/** @type {string} */ res) => {
+    const output = async (res: string) => {
       const formatted = format.fancy(res)
       const { length } = formatted
       const maxLength = 2000
@@ -84,7 +92,6 @@ export function startBot(cfg) {
       }
     }
 
-    /** @type {import('./commands.js').CommandContext} */
     const context = {
       event: message,
       users,
@@ -95,7 +102,7 @@ export function startBot(cfg) {
       },
       output,
       ...cfg,
-    }
+    } satisfies CommandContext
 
     try {
       const result = await cfg.execute.call(context, input)
@@ -113,13 +120,9 @@ export function startBot(cfg) {
   })
 
   // Login to Discord
-  client.login(cfg.token)
+  void client.login(cfg.token)
 
-  /**
-   * @param {string} channelId
-   * @param {string} content
-   */
-  async function message(channelId, content) {
+  async function message(channelId: string, content: string) {
     try {
       const channel = client.channels.cache.get(channelId)
       if (!channel || !channel.isTextBased() || !channel.isSendable()) {

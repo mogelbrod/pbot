@@ -1,26 +1,40 @@
-import js from '@eslint/js'
-import { defineConfig, globalIgnores } from 'eslint/config'
-import globals from 'globals'
+import eslint from '@eslint/js'
+import { defineConfig } from 'eslint/config'
+import tseslint from 'typescript-eslint'
+import eslintConfigPrettier from 'eslint-config-prettier/flat'
 
-export default defineConfig([
-  globalIgnores(['./index.js']),
+export default defineConfig(
   {
-    extends: [js.configs.recommended],
     languageOptions: {
-      ecmaVersion: 2023,
-      sourceType: 'module',
-      globals: {
-        ...globals.node,
+      parserOptions: {
+        projectService: true,
       },
     },
+  },
+  eslint.configs.recommended,
+  tseslint.configs.recommendedTypeChecked,
+  {
     rules: {
-      'array-bracket-spacing': 2,
+      '@typescript-eslint/no-explicit-any': 0,
+      '@typescript-eslint/no-misused-promises': 0,
+      '@typescript-eslint/no-unsafe-argument': 0,
+      '@typescript-eslint/no-unsafe-assignment': 0,
+      '@typescript-eslint/no-unsafe-call': 0,
+      '@typescript-eslint/no-unsafe-member-access': 0,
+      '@typescript-eslint/no-unsafe-return': 0,
+      '@typescript-eslint/prefer-promise-reject-errors': 0,
+      '@typescript-eslint/no-unused-vars': [
+        2,
+        { argsIgnorePattern: '^_', ignoreRestSiblings: true, args: 'none' },
+      ],
+      '@typescript-eslint/prefer-readonly': 1,
+      '@typescript-eslint/explicit-module-boundary-types': 'off',
+      '@typescript-eslint/ban-ts-comment': 'off',
       'array-callback-return': 1,
       'arrow-body-style': 0,
       'block-scoped-var': 2,
       camelcase: 0,
       'class-methods-use-this': 0,
-      'computed-property-spacing': 2,
       'consistent-return': 0,
       'constructor-super': 2,
       'default-case': 0,
@@ -30,10 +44,8 @@ export default defineConfig([
       'func-names': 0,
       'func-style': [2, 'declaration', { allowArrowFunctions: true }],
       'function-paren-newline': 0,
-      'generator-star-spacing': 2,
       'global-require': 0,
       'jsx-quotes': [2, 'prefer-double'],
-      'key-spacing': 2,
       'linebreak-style': 2,
       'lines-between-class-members': 0,
       'max-classes-per-file': 0,
@@ -52,7 +64,7 @@ export default defineConfig([
       'no-fallthrough': 2,
       'no-implied-eval': 2,
       'no-inner-declarations': 0,
-      'no-invalid-this': 0, // https://medium.com/@chestozo/fixing-eslint-no-invalid-this-error-for-fat-arrow-class-methods-a56908ca8bb6
+      'no-invalid-this': 0,
       'no-label-var': 2,
       'no-lone-blocks': 2,
       'no-lonely-if': 2,
@@ -72,7 +84,6 @@ export default defineConfig([
       'no-unmodified-loop-condition': 2,
       'no-unneeded-ternary': 2,
       'no-unused-expressions': 0, // avoid errors on chai expressions
-      'no-unused-vars': [2, { ignoreRestSiblings: true, args: 'none' }],
       'no-use-before-define': 0,
       'no-useless-call': 2,
       'no-useless-computed-key': 2,
@@ -90,9 +101,15 @@ export default defineConfig([
       'prefer-spread': 0,
       'prefer-template': 0,
       radix: 2,
-      'rest-spread-spacing': 2,
       'valid-jsdoc': 0,
       yoda: 2,
     },
   },
-])
+  {
+    files: ['.mocharc.cjs'],
+    languageOptions: {
+      globals: { module: 'readonly' },
+    },
+  },
+  eslintConfigPrettier,
+)

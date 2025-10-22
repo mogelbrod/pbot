@@ -1,36 +1,33 @@
 import ms from 'ms'
 import * as f from './format.js'
 import { findPlace, searchPlaces } from './google-places.js'
+import type { Backend } from './backend.js'
 
-/**
- * @typedef {Object} User
- * @property {string} id
- * @property {string} name
- * @property {string} [displayName]
- */
+export interface User {
+  id: string
+  name: string
+  displayName?: string
+}
 
-/**
- * @typedef {Object} CommandContext
- * @property {import('./backend.js').Backend} backend
- * @property {(...args: any[]) => void} log
- * @property {(result: any) => void} output
- * @property {User} [user]
- */
+export interface CommandContext {
+  backend: Backend
+  log: (...args: any[]) => void
+  output: (result: any) => void
+  user?: User
+}
 
-/**
- * Map of available commands by name
- *
- * @type {Record<string, { description: string, fn: Function }>}
- */
-export const commands = {}
+export type CommandFn = (this: CommandContext, ...args: string[]) => any
+
+export const commands: Record<string, { description: string; fn: CommandFn }> =
+  {}
 
 /**
  * Parse and execute the given input.
  *
- * @param {string[]|string} input - Raw input string or tokens array.
- * @return {Promise} Execution result
+ * @param input - Raw input string or tokens array.
+ * @return Execution result
  */
-export function execute(input) {
+export function execute(input: string[] | string): Promise<any> {
   if (typeof this !== 'object' || this === global || !this.backend) {
     throw new Error('Must provide a valid execution context as `this`')
   }
@@ -71,7 +68,7 @@ export function execute(input) {
   })
 }
 
-export function args(command, leadingSpace = true) {
+export function args(command: string, leadingSpace = true) {
   const definition = commands[command]
   if (!definition) {
     throw new Error(`Command \`${command}\` not found`)
@@ -94,13 +91,16 @@ export function args(command, leadingSpace = true) {
  * Command functions must be declared using ES5 syntax since context is bound
  * to `this` during execution.
  *
- * @template {(this: CommandContext, ...args: string[]) => any} Fn
- * @param {String} name - Command name used to call it.
- * @param {String} description - Command description, displayed when running `help`.
- * @param {Fn} fn - ES5 function to invoke when running command.
- * @returns {Fn} - Returns the same function passed as the `fn` argument.
+ * @param name - Command name used to call it.
+ * @param description - Command description, displayed when running `help`.
+ * @param fn - ES5 function to invoke when running command.
+ * @returns Returns the same function passed as the `fn` argument.
  */
-function command(name, description, fn) {
+function command<Fn extends CommandFn>(
+  name: string,
+  description: string,
+  fn: Fn,
+): Fn {
   commands[name] = { description, fn }
   return fn
 }
@@ -114,7 +114,7 @@ command(
 )
 
 command('sessions', 'Lists most recent/all sessions', function (limit = '10') {
-  let intLimit = parseInt(limit, 10)
+  let intLimit = parseInt(String(limit), 10)
   if (!isInt(intLimit) || intLimit < 0) {
     intLimit = 0
   }
@@ -287,6 +287,7 @@ command(
 )
 
 command('sum', 'Alias of list', function (what = '-1') {
+  // eslint-disable-next-line prefer-rest-params
   return commands.list.fn.apply(this, arguments)
 })
 
@@ -337,8 +338,8 @@ command(
         place.Session = sessionByPlaceId[place.place_id]
       })
 
-      if (rows.length > results) {
-        rows = rows.slice(0, results)
+      if (rows.length > resultsInt) {
+        rows = rows.slice(0, resultsInt)
       }
 
       // Prepend with header
@@ -412,7 +413,7 @@ command(
   'Merges drinks in oldest sessions to free up Airtable rows',
   function (rows = '1') {
     let rowsInt = parseInt(String(rows), 10)
-    if (!isInt(rows) || rows < 1 || rows > 100) {
+    if (!isInt(rows) || rowsInt < 1 || rowsInt > 100) {
       rowsInt = 1
     }
     let deleted = 0
@@ -726,11 +727,7 @@ function assertAdminUser(context) {
     })
 }
 
-/**
- * @param {any} value
- * @return {value is number}
- */
-function isInt(value) {
+function isInt(value: any): value is number {
   // eslint-disable-next-line eqeqeq
   return parseInt(value, 10) == value
 }

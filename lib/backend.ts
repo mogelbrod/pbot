@@ -3,7 +3,12 @@ import { findInArray } from './find-in-array.js'
 import { omitUnderscored } from './utils.js'
 
 export class Backend {
-  constructor(config) {
+  config: any
+  base: any
+  data: Record<string, any>
+  inflight: Record<string, Promise<any>>
+
+  constructor(config: any) {
     this.config = config
     this.base = new Airtable({ apiKey: config.key }).base(config.base)
     this.data = {}
@@ -68,7 +73,7 @@ export class Backend {
         .eachPage(
           (results, fetchNextPage) => {
             this.log(`[Backend] Got ${results.length} ${name} records`)
-            items = items.concat(results.map(this.parseRecord))
+            items = items.concat(results.map((r) => this.parseRecord(r)))
             fetchNextPage() // triggers this function again, or the done function
           },
           (error) => {
@@ -106,11 +111,11 @@ export class Backend {
     return Promise.all(names.map((t) => this.table(t, null, cache)))
   }
 
-  session(/** @type {string | number} */ index = '-1') {
-    index = parseInt(String(index), 10)
+  session(index: string | number = '-1') {
+    let idx = parseInt(String(index), 10)
     return this.table('Sessions').then((sessions) => {
-      if (+index < 0) index += sessions.length
-      const s = sessions[index]
+      if (idx < 0) idx += sessions.length
+      const s = sessions[idx]
       if (!s) {
         throw new Error(`No sessions found`)
       }

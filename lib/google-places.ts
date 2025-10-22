@@ -11,25 +11,30 @@ const DEFAULT_LOCATION = '59.343,18.05'
  * Will return the best candidate, or null, by default.
  * Use `returnFirst = false` to return all candidates instead.
  *
- * @param {String} query - Name/address of place to retrieve
- * @param {Object} o - Options
- * @param {String} o.googlePlacesKey - Places API key
- * @param {Boolean} [o.returnFirst=true] - Use false to return all candidates
+ * @param query - Name/address of place to retrieve
+ * @param o - Options
+ * @param o.googlePlacesKey - Places API key
+ * @param o.returnFirst - Use false to return all candidates
  *        instead of only the first
- * @param {String} [o.location] Latitude and longitude to search from
- * @param {Number} [o.radius=5000] Search radius in meters
- * @return {Promise} Promise resolving to best candidate if returnFirst=true,
+ * @param o.location - Latitude and longitude to search from
+ * @param o.radius - Search radius in meters
+ * @return Promise resolving to best candidate if returnFirst=true,
  *         otherwise an array with candidates
  */
 export function findPlace(
-  query,
+  query: string,
   {
     googlePlacesKey,
     returnFirst = true,
     location = DEFAULT_LOCATION,
     radius = 5000,
+  }: {
+    googlePlacesKey: string
+    returnFirst?: boolean
+    location?: string
+    radius?: number
   },
-) {
+): Promise<any> {
   assertKey(googlePlacesKey)
 
   const url =
@@ -43,7 +48,7 @@ export function findPlace(
     })
   return fetch(url)
     .then((res) => res.json())
-    .then((/** @type {any} */ json) => {
+    .then((json: any) => {
       // Error handling
       if (json.status !== 'OK' && json.status !== 'ZERO_RESULTS') {
         throw Object.assign(new Error(`findPlace: Got status ${json.status}`), {
@@ -64,22 +69,36 @@ export function findPlace(
  * @see https://developers.google.com/places/web-service/search#TextSearchRequests
  * @see https://developers.google.com/places/web-service/search#PlaceSearchRequests
  *
- * @param {String} query - Keywords to search for
- * @param {Object} options - Options
- * @param {String} options.googlePlacesKey - Places API key
- * @param {Boolean} [options.nearby] Switch from text to nearby search
- * @param {String} [options.location] Latitude and longitude to search from
- * @param {Number} [options.radius=5000] Search radius in meters
- * @param {Number} [options.minPrice=0] Minimum price range (0-4)
- * @param {Number} [options.maxPrice=0] Maximum price range (0-4)
- * @param {String} [options.type] Limit results to a specific type
- * @param {Boolean} [options.openNow=false] Limit to places that are currently open
- * @param {String} [options.pageToken] Return more results for an earlier search
- * @param {String} [options.rankBy=prominence] Rank by prominence/distance (nearby mode only)
- * @param {Number} [options.targetCount=0] Number of results to aim to return
- * @return {Promise}
+ * @param query - Keywords to search for
+ * @param options - Options
+ * @param options.googlePlacesKey - Places API key
+ * @param options.nearby - Switch from text to nearby search
+ * @param options.location - Latitude and longitude to search from
+ * @param options.radius - Search radius in meters
+ * @param options.minPrice - Minimum price range (0-4)
+ * @param options.maxPrice - Maximum price range (0-4)
+ * @param options.type - Limit results to a specific type
+ * @param options.openNow - Limit to places that are currently open
+ * @param options.pageToken - Return more results for an earlier search
+ * @param options.rankBy - Rank by prominence/distance (nearby mode only)
+ * @param options.targetCount - Number of results to aim to return
  */
-export function searchPlaces(query, options) {
+export function searchPlaces(
+  query: string,
+  options: {
+    googlePlacesKey: string
+    nearby?: boolean
+    radius?: number
+    location?: string
+    minPrice?: number
+    maxPrice?: number
+    type?: string
+    openNow?: boolean
+    rankBy?: string
+    pageToken?: string
+    targetCount?: number
+  },
+): Promise<any[]> {
   const {
     googlePlacesKey,
     nearby = false,
@@ -104,6 +123,8 @@ export function searchPlaces(query, options) {
     minprice: minPrice,
     maxprice: maxPrice,
     pagetoken: pageToken,
+    opennow: undefined as boolean | undefined,
+    rankby: undefined as string | undefined,
   }
   params[nearby ? 'input' : 'query'] = query
   if (openNow) {
@@ -121,7 +142,7 @@ export function searchPlaces(query, options) {
     fetch(url)
       // TODO: Handle status (= 'INVALID_REQUEST' => retry after 1s)
       .then((res) => res.json())
-      .then((/** @type {any} */ json) => {
+      .then((json: any) => {
         // Requested page has not yet been generated
         if (json.status === 'INVALID_REQUEST' && pageToken) {
           // Retry after waiting for a bit
@@ -156,7 +177,7 @@ export function searchPlaces(query, options) {
   )
 }
 
-function assertKey(key) {
+function assertKey(key: string) {
   if (typeof key !== 'string' || !key.length) {
     throw new Error(`Missing required googlePlacesKey config value`)
   }

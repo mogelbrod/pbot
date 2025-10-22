@@ -3,52 +3,33 @@ import qs from 'query-string'
 
 let isFancy = true
 
-/**
- * @param {boolean} enable
- */
-export function setFancy(enable) {
+export function setFancy(enable: boolean): boolean {
   isFancy = enable
   return enable
 }
 
-export function basic() {
+export function basic(): boolean {
   return !isFancy
 }
 
-/**
- * @param {string} v
- */
-export function escape(v) {
+export function escape(v: string): string {
   return basic() ? v : escapeMarkdown(v)
 }
-/**
- * @param {string} v
- */
-export function unescape(v) {
+export function unescape(v: string): string {
   return v // TODO: Implement unescape?
 }
 
-/**
- * @param {string} v
- */
-export function capitalize(v) {
+export function capitalize(v: string): string {
   return v[0].toUpperCase() + v.substr(1).toLowerCase()
 }
 
-/**
- * @param {any} v
- */
-export function stringify(v) {
+export function stringify(v: any): string {
   if (typeof v === 'string') return v
   if (v instanceof Error) return v.stack || v.message
   return JSON.stringify(v, null, 2)
 }
 
-/**
- * @param {any} v
- * @param {number} [depth=0]
- */
-export function fancy(v, depth = 0) {
+export function fancy(v: any, depth = 0): string {
   const joiner = depth > 0 ? ' ' : '\n'
   const type = (v && v._type) || {}.toString.call(v).slice(8, -1)
   switch (type) {
@@ -103,13 +84,11 @@ export function fancy(v, depth = 0) {
   return wrap + escape(str) + wrap
 }
 
-/**
- * @param {string} delimeter
- * @param {any[]} parts
- */
-export function wrap(delimeter, ...parts) {
+export function wrap(delimeter: string, ...parts: any[]): string {
   if (typeof delimeter !== 'string') {
-    throw new TypeError(`wrap: Delimeter must be a string, got '${delimeter}'`)
+    throw new TypeError(
+      `wrap: Delimeter must be a string, got '${delimeter as any}'`,
+    )
   }
   let str = parts.join(' ')
   if (delimeter === '') {
@@ -123,17 +102,15 @@ export function wrap(delimeter, ...parts) {
 export const bold = wrap.bind(null, '**')
 export const code = wrap.bind(null, '`')
 
-/**
- * @param {number} number
- */
-export function toFixed(number, decimals = 1, fallback = '0') {
+export function toFixed(
+  number: number | undefined | null,
+  decimals = 1,
+  fallback = '0',
+): string {
   return typeof number === 'number' ? number.toFixed(decimals) : fallback
 }
 
-/**
- * @param {any[]} args
- */
-export function log(...args) {
+export function log(...args: any[]): string {
   return [
     '[',
     date(new Date(), true, true),
@@ -142,10 +119,7 @@ export function log(...args) {
   ].join('')
 }
 
-/**
- * @param {string} str
- */
-export function tokenize(str) {
+export function tokenize(str: string): string[] {
   const tokens = []
   let currentToken = ''
   let quote
@@ -189,12 +163,11 @@ export function tokenize(str) {
   return tokens
 }
 
-/**
- * @param {string | number | Date} date
- * @param {boolean} [includeTime=false]
- * @param {boolean} [basicOverride]
- */
-export function date(date, includeTime = false, basicOverride) {
+export function date(
+  date: string | number | Date,
+  includeTime = false,
+  basicOverride?: boolean,
+): string {
   if (basicOverride == null) {
     basicOverride = basic()
   }
@@ -219,37 +192,23 @@ export function date(date, includeTime = false, basicOverride) {
   )
 }
 
-/**
- * @param {string} text
- * @param {string} url
- */
-export function linkify(text, url) {
+export function linkify(text: string, url?: string | null): string {
   url = url ? escape(url) : luckyURL(text)
   return basic() ? text : `[${text}](<${escape(url)}>)`
 }
 
-/**
- * @param {string} value
- */
-export function discordTag(value) {
+export function discordTag(value: string): string {
   return basic() ? '' : value
 }
 
-/**
- * @param {string} value
- */
-export function DiscordTag(value) {
+export function DiscordTag(value: string) {
   return {
     _type: 'DiscordTag',
     value,
   }
 }
 
-/**
- * @param {any[] | Record<string, any>} objectOrArray
- * @param {any} type
- */
-export function addType(objectOrArray, type) {
+export function addType(objectOrArray: any[] | Record<string, any>, type: any) {
   if (Array.isArray(objectOrArray)) {
     objectOrArray.forEach((obj) => addType(obj, type))
   } else if (objectOrArray && typeof objectOrArray === 'object') {
@@ -258,15 +217,14 @@ export function addType(objectOrArray, type) {
   return objectOrArray
 }
 
-export function luckyURL(/** @type {string} */ query) {
+export function luckyURL(query: string): string {
   return `http://www.google.com/search?q=${encodeURIComponent(query)}&btnI`
 }
 
-/**
- * @param {string} query
- * @param {string} [placeId]
- */
-export function placeURL(query, placeId) {
+export function placeURL(
+  query: string,
+  placeId?: string | null,
+): string | null {
   if (placeId == null) {
     return null
   }
@@ -301,19 +259,13 @@ const DRINK_TYPES = {
   },
 }
 
-/**
- * @param {string | { Type: string }} drink
- */
-export function drinkType(drink) {
+export function drinkType(drink: string | { Type: string }) {
   if (typeof drink === 'object') {
     drink = drink.Type
   }
-  return DRINK_TYPES[drink] || DRINK_TYPES.Unknown
+  return (DRINK_TYPES as Record<string, any>)[drink] || DRINK_TYPES.Unknown
 }
 
-/**
- * @param {string} str
- */
-export function escapeRegExp(str) {
+export function escapeRegExp(str: string): string {
   return str.replace(/([.*+?^=!:${}()|[\]/\\])/g, '\\$1')
 }

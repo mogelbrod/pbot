@@ -1,7 +1,15 @@
 import ms from 'ms'
 import * as f from './format.js'
 import { findPlaces, searchPlaces } from './google-places.js'
-import type { Backend, Config, User } from './types.js'
+import type {
+  Backend,
+  Config,
+  EntityType,
+  Member,
+  Output,
+  Session,
+  User,
+} from './types.js'
 import type { GuildMember } from 'discord.js'
 
 export interface CommandContext {
@@ -117,17 +125,17 @@ command('sessions', 'Lists most recent/all sessions', function (limit = '10') {
     intLimit = 0
   }
 
-  return this.backend.table('Sessions', null, false).then((results) => {
+  return this.backend.table('Sessions', null, false).then((sessions) => {
     if (intLimit) {
-      const total = results.length
-      results = results.slice(-intLimit)
+      const total = sessions.length
+      sessions = sessions.slice(-intLimit)
       if (intLimit < total) {
-        results.unshift(
-          `Showing ${intLimit} of ${total} sessions (\`sessions all\` to see all)`,
+        sessions.unshift(
+          `Showing ${intLimit} of ${total} sessions (\`sessions all\` to see all)` as any,
         )
       }
     }
-    return results
+    return sessions
   })
 })
 
@@ -151,7 +159,7 @@ command('members', 'Lists all members', function () {
 
 command('reload', 'Reloads all tables', function (...tables) {
   return this.backend
-    .tables(false, ...tables)
+    .tables(false, ...(tables as EntityType[]))
     .then(() => `Reloaded tables ${tables.join(', ')}`)
 })
 
@@ -530,7 +538,9 @@ command('list', 'Lists drinks for a session/user', function (what = '-1') {
   ]).then((res) => {
     const parent = res[0]
     const groupingItems = res[1]
-    const parentId = forSession ? this.backend.time(parent.Start) : parent.Email
+    const parentId = forSession
+      ? this.backend.time((parent as Session).Start)
+      : (parent as Member).Email
     return this.backend
       .table('Drinks', {
         filterByFormula: `${parent._type} = '${parentId}'`,
@@ -550,7 +560,7 @@ command('list', 'Lists drinks for a session/user', function (what = '-1') {
           return memo
         }, {})
 
-        const ranked = Object.keys(partitions)
+        const ranked: Array<Output> = Object.keys(partitions)
           .map((key) => partitions[key])
           .sort((a, b) => {
             return forSession

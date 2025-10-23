@@ -1,5 +1,6 @@
 import { time, TimestampStyles, escapeMarkdown } from 'discord.js'
 import qs from 'query-string'
+import type { EntityUnion } from './types'
 
 let isFancy = true
 
@@ -29,54 +30,64 @@ export function stringify(v: any): string {
   return JSON.stringify(v, null, 2)
 }
 
-export function fancy(v: any, depth = 0): string {
+export function isEntity(v: unknown): v is EntityUnion {
+  return (
+    !!v && typeof v === 'object' && '_type' in v && typeof v._type === 'string'
+  )
+}
+
+export function fancy(v: unknown, depth = 0): string {
   const joiner = depth > 0 ? ' ' : '\n'
-  const type = (v && v._type) || {}.toString.call(v).slice(8, -1)
-  switch (type) {
-    case 'Number':
-    case 'String':
-      return v
-    case 'Date':
-      return date(v, true)
-    case 'Array':
-      return v
-        .map((x) => fancy(x, depth + 1))
-        .filter((x) => typeof x !== 'string' || x.length)
-        .join(joiner)
-    case 'DiscordTag':
-      return basic() ? '' : v.value
-    case 'Drinks': {
-      let volume = v.Volume
-      const { emoji } = drinkType(v)
-      if (v['Aggregated Volume']) {
-        volume = v['Aggregated Volume'].replace(/\+/g, emoji)
+  if (isEntity(v)) {
+    switch (v._type) {
+      case 'DiscordTag':
+        return basic() ? '' : v.value
+      case 'Drinks': {
+        let volume = String(v.Volume)
+        const { emoji } = drinkType(v)
+        if (v['Aggregated Volume']) {
+          volume = v['Aggregated Volume'].replace(/\+/g, emoji)
+        }
+        return volume + emoji
       }
-      return volume + emoji
+      case 'Members':
+        return v.Name + (depth < 2 && v.Role ? ` (${v.Role})` : '')
+      case 'Sessions':
+        const url = placeURL(v.Location, v.GooglePlaceID)
+        return `${linkify(v.Location, url)} (${date(v.Start, true)})`
+      case 'Feedback':
+        return `"${v.Feedback}" - ${fancy(v.Author, 2)} (${date(v._created, true)})`
+      case 'Quotes':
+        return `"${v.Quote}" - ${fancy(v.Author, 2)} (${date(v._created, true)})`
+      case 'GooglePlace': {
+        const address = (v.formatted_address || v.vicinity || '').replace(
+          /, .+/,
+          '',
+        )
+        return (
+          `[💵 ${v.price_level || '?'} ⭐️ ${toFixed(v.rating, 1, '?')}] ` +
+          bold(linkify(v.name, placeURL(v.name, v.place_id))) +
+          (address ? ` (${address})` : '') +
+          (v.Session ? ` 🗓 ${date(v.Session.Start)}` : '')
+        )
+      }
+      case 'RawResult':
+        v = v.raw
+        break
     }
-    case 'Members':
-      return v.Name + (depth < 2 && v.Role ? ` (${v.Role})` : '')
-    case 'Sessions':
-      const url = placeURL(v.Location, v.GooglePlaceID)
-      return `${linkify(v.Location, url)} (${date(v.Start, true)})`
-    case 'Feedback':
-      return `"${v.Feedback}" - ${fancy(v.Author, 2)} (${date(v._created, true)})`
-    case 'Quotes':
-      return `"${v.Quote}" - ${fancy(v.Author, 2)} (${date(v._created, true)})`
-    case 'GooglePlace': {
-      const address = (v.formatted_address || v.vicinity || '').replace(
-        /, .+/,
-        '',
-      )
-      return (
-        `[💵 ${v.price_level || '?'} ⭐️ ${toFixed(v.rating, 1, '?')}] ` +
-        bold(linkify(v.name, placeURL(v.name, v.place_id))) +
-        (address ? ` (${address})` : '') +
-        (v.Session ? ` 🗓 ${date(v.Session.Start)}` : '')
-      )
+  } else {
+    switch ({}.toString.call(v).slice(8, -1)) {
+      case 'Number':
+      case 'String':
+        return v as string
+      case 'Date':
+        return date(v as Date, true)
+      case 'Array':
+        return (v as any[])
+          .map((x) => fancy(x, depth + 1))
+          .filter((x) => typeof x !== 'string' || x.length)
+          .join(joiner)
     }
-    case 'RawResult':
-      v = v.raw
-      break
   }
   const str = stringify(v)
   if (basic()) return str
@@ -84,7 +95,7 @@ export function fancy(v: any, depth = 0): string {
   return wrap + escape(str) + wrap
 }
 
-export function wrap(delimeter: string, ...parts: any[]): string {
+export function wrap(delimeter: string, ...parts: string[]): string {
   if (typeof delimeter !== 'string') {
     throw new TypeError(
       `wrap: Delimeter must be a string, got '${delimeter as any}'`,

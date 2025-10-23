@@ -1,16 +1,10 @@
 import fetch from 'node-fetch'
 import qs from 'query-string'
 import { addType } from './format.js'
+import type { GooglePlace } from './types.js'
 
 export const TYPE = 'GooglePlace'
 const DEFAULT_LOCATION = '59.343,18.05'
-
-export interface GooglePlace {
-  _type: typeof TYPE
-  place_id: string
-  formatted_address: string
-  name: string
-}
 
 /**
  * Returns 0 or more places given a query, location & radius.
@@ -71,18 +65,18 @@ export async function findPlaces(
  * @see https://developers.google.com/places/web-service/search#PlaceSearchRequests
  *
  * @param query - Keywords to search for
- * @param options - Options
- * @param options.googlePlacesKey - Places API key
- * @param options.nearby - Switch from text to nearby search
- * @param options.location - Latitude and longitude to search from
- * @param options.radius - Search radius in meters
- * @param options.minPrice - Minimum price range (0-4)
- * @param options.maxPrice - Maximum price range (0-4)
- * @param options.type - Limit results to a specific type
- * @param options.openNow - Limit to places that are currently open
- * @param options.pageToken - Return more results for an earlier search
- * @param options.rankBy - Rank by prominence/distance (nearby mode only)
- * @param options.targetCount - Number of results to aim to return
+ * @param o - Options
+ * @param o.googlePlacesKey - Places API key
+ * @param o.nearby - Switch from text to nearby search
+ * @param o.location - Latitude and longitude to search from
+ * @param o.radius - Search radius in meters
+ * @param o.minPrice - Minimum price range (0-4)
+ * @param o.maxPrice - Maximum price range (0-4)
+ * @param o.type - Limit results to a specific type
+ * @param o.openNow - Limit to places that are currently open
+ * @param o.pageToken - Return more results for an earlier search
+ * @param o.rankBy - Rank by prominence/distance (nearby mode only)
+ * @param o.targetCount - Number of results to aim to return
  */
 export function searchPlaces(
   query: string,

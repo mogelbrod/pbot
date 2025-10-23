@@ -5,8 +5,8 @@ import * as f from './format.js'
 describe('format', () => {
   describe('wrap()', () => {
     it('should require delimeter to be a string', () => {
-      expect(() => f.wrap(undefined, 'a')).to.throw(TypeError)
-      expect(() => f.wrap(null, 'b')).to.throw(TypeError)
+      expect(() => f.wrap(undefined as any, 'a')).to.throw(TypeError)
+      expect(() => f.wrap(null as any, 'b')).to.throw(TypeError)
     })
 
     it('should allow empty string delimeters', () => {

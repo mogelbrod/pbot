@@ -15,16 +15,18 @@ const options = {
 // Parse leading `--option(=value)` flags into `options` object
 let optionMatch: RegExpMatchArray | null
 while (args[0] && (optionMatch = args[0].match(/--(\w+)(?:=(.*))/))) {
-  const option = optionMatch[1]
+  const option = optionMatch[1] as keyof typeof options
   let value: string | boolean | undefined = optionMatch[2]
   switch (typeof options[option]) {
-    case 'undefined':
-      throw new Error(`Unknown option '${option}'`)
     case 'boolean':
       value = value === 'true' || value === '1'
       break
+    case 'string':
+      ;(options as any)[option] = value
+      break
+    default:
+      throw new Error(`Unknown option '${option}'`)
   }
-  options[option] = value
   args.shift()
 }
 

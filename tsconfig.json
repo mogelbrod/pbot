@@ -6,6 +6,7 @@
     "target": "es2024",
     "allowJs": true,
     "checkJs": true,
+    "strict": true,
     "resolveJsonModule": true,
     "esModuleInterop": true,
     "isolatedModules": true,

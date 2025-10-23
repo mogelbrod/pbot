@@ -8,12 +8,13 @@ import {
 } from 'discord.js'
 import * as format from './format.js'
 import type { CommandContext } from './commands.js'
+import type { Output } from './types.js'
 
 export function startBot(cfg: {
   token: string
   defaultChannel?: string
   context: CommandContext
-  execute: (this: CommandContext, input: string) => Promise<string>
+  execute: (this: CommandContext, input: string) => Promise<Output>
 }): (channelId: string, content: string) => Promise<void> {
   if (typeof cfg !== 'object') {
     throw new Error('A config must be provided')
@@ -36,7 +37,7 @@ export function startBot(cfg: {
   })
 
   client.once(Events.ClientReady, () => {
-    log(`Connected as ${client.user.tag}`)
+    log(`Connected as ${client.user!.tag}`)
     client.guilds.cache.forEach((guild) => {
       void guild.members.fetch().then((members) => {
         log(`Retrieved ${members.size} users from ${guild.name}`)
@@ -57,7 +58,7 @@ export function startBot(cfg: {
     const isMentioned =
       !!prefix &&
       // Can't directly compare @mention against client.user since the IDs seem to vary
-      (!prefix[1].startsWith('<@') || message.mentions.has(client.user))
+      (!prefix[1].startsWith('<@') || message.mentions.has(client.user!))
     const isDM = message.channel.type === ChannelType.DM
     if (!isMentioned && !isDM) return
 
@@ -68,7 +69,7 @@ export function startBot(cfg: {
 
     void message.channel.sendTyping()
 
-    const output = async (res: string) => {
+    const output = async (res: Output) => {
       const formatted = format.fancy(res)
       const { length } = formatted
       const maxLength = 2000
@@ -115,7 +116,7 @@ export function startBot(cfg: {
       if (result) {
         await output(result)
       }
-    } catch (err) {
+    } catch (err: any) {
       log(`Error when handling message: ${err.stack || err}`)
       const errorMessage = `**Error:** ${err.message || err}`.replace(
         /^Error: (\w*Error):/,

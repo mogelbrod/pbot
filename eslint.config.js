@@ -19,6 +19,7 @@ export default defineConfig(
       '@typescript-eslint/no-misused-promises': 0,
       '@typescript-eslint/no-unsafe-argument': 0,
       '@typescript-eslint/no-unsafe-assignment': 0,
+      '@typescript-eslint/no-unnecessary-type-assertion': 0,
       '@typescript-eslint/no-unsafe-call': 0,
       '@typescript-eslint/no-unsafe-member-access': 0,
       '@typescript-eslint/no-unsafe-return': 0,

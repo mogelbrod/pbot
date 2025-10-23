@@ -118,6 +118,8 @@ export function searchPlaces(
     minprice: minPrice,
     maxprice: maxPrice,
     pagetoken: pageToken,
+    input: undefined as string | undefined,
+    query: undefined as string | undefined,
     opennow: undefined as boolean | undefined,
     rankby: undefined as string | undefined,
   }
@@ -172,7 +174,7 @@ export function searchPlaces(
   )
 }
 
-function assertKey(key: string) {
+function assertKey(key: unknown): asserts key is string {
   if (typeof key !== 'string' || !key.length) {
     throw new Error(`Missing required googlePlacesKey config value`)
   }

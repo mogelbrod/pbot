@@ -90,9 +90,13 @@ export function fancy(v: unknown, depth = 0): string {
     }
   }
   const str = stringify(v)
-  if (basic()) return str
-  const wrap = str.length > 40 || str.indexOf('\n') >= 0 ? '```' : '`'
-  return wrap + escape(str) + wrap
+  if (basic()) {
+    return str
+  }
+  if (str.length > 40 || str.indexOf('\n') >= 0) {
+    return '```' + str.replaceAll('```', '\\```') + '```'
+  }
+  return wrap('`', str)
 }
 
 export function wrap(delimeter: string, ...parts: string[]): string {

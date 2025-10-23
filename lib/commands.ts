@@ -4,10 +4,12 @@ import { findPlaces, searchPlaces } from './google-places.js'
 import type {
   Backend,
   Config,
-  EntityType,
+  Drink,
+  EntityForTable,
   Member,
   Output,
   Session,
+  TableName,
   User,
 } from './types.js'
 import type { GuildMember } from 'discord.js'
@@ -22,7 +24,10 @@ export interface CommandContext {
   users?: GuildMember[]
 }
 
-export type CommandFn = (this: CommandContext, ...args: string[]) => any
+export type CommandFn = (
+  this: CommandContext,
+  ...args: string[]
+) => Output | Promise<Output>
 
 export const commands: Record<string, { description: string; fn: CommandFn }> =
   {}
@@ -33,8 +38,11 @@ export const commands: Record<string, { description: string; fn: CommandFn }> =
  * @param input - Raw input string or tokens array.
  * @return Execution result
  */
-export function execute(input: string[] | string): Promise<any> {
-  if (typeof this !== 'object' || this === global || !this.backend) {
+export function execute(
+  this: CommandContext,
+  input: string[] | string,
+): Promise<Output> {
+  if (typeof this !== 'object' || !this.backend) {
     throw new Error('Must provide a valid execution context as `this`')
   }
 
@@ -66,7 +74,7 @@ export function execute(input: string[] | string): Promise<any> {
     }
     if (commandDef.fn.length > input.length) {
       throw new Error(
-        `Insufficient number of arguments for \`${commandName}${args(commandName)}\``,
+        `Insufficient number of arguments for \`${commandName}${functionToArgsString(commandName)}\``,
       )
     }
 
@@ -74,7 +82,7 @@ export function execute(input: string[] | string): Promise<any> {
   })
 }
 
-export function args(command: string, leadingSpace = true) {
+export function functionToArgsString(command: string, leadingSpace = true) {
   const definition = commands[command]
   if (!definition) {
     throw new Error(`Command \`${command}\` not found`)
@@ -82,7 +90,7 @@ export function args(command: string, leadingSpace = true) {
   // Ugly and not at all guaranteed to work, but still fun :)
   const str = definition.fn
     .toString()
-    .replace(/^function[^(]*/, '') // strip leading function syntax
+    .replace(/^(async )?function[^(]*/, '') // strip leading function syntax
     .replace(/(\s*=>\s*|{)[\s\S]+/, '') // strip function block
     .replace(/^\s*\(|\)\s*$/g, '') // remove wrapping parentheses
     .replace(/\s+=\s+/g, '=') // remove whitespace next to =
@@ -159,24 +167,26 @@ command('members', 'Lists all members', function () {
 
 command('reload', 'Reloads all tables', function (...tables) {
   return this.backend
-    .tables(false, ...(tables as EntityType[]))
+    .tables(false, ...(tables as TableName[]))
     .then(() => `Reloaded tables ${tables.join(', ')}`)
 })
 
-command('start', 'Begins a new session', function (location = 'Unknown') {
+command('start', 'Begins a new session', async function (location = 'Unknown') {
   let session = {
     Start: new Date().toISOString(),
     Location: location,
   }
   return findPlaces(location, {
-    googlePlacesKey: this.config.googlePlacesKey,
+    googlePlacesKey: this.config.googlePlacesKey!,
   })
     .catch((error) => {
       this.output(error)
       return null
     })
     .then((places) => {
-      session = this.backend.placeToSession(places[0], session)
+      if (places && places[0]) {
+        session = this.backend.placeToSession(places[0], session)
+      }
       return this.backend.create('Sessions', session)
     })
     .then((res) => {
@@ -191,7 +201,7 @@ command('start', 'Begins a new session', function (location = 'Unknown') {
 
 // TODO: Either move this to airtable (yuck) or to the `this` context (requires
 // context to be reused throughout script lifetime)
-const activeTimers = []
+const activeTimers: any[] = []
 
 command(
   'timer',
@@ -207,7 +217,7 @@ command(
       }
     }
 
-    const milliseconds = ms(duration)
+    const milliseconds = ms(duration as any) as unknown as number
 
     if (!milliseconds || milliseconds <= 1e3) {
       return rejectError(`Invalid timer duration ${f.code(duration)}`)
@@ -277,7 +287,7 @@ command(
 
           return this.backend[deleted ? 'delete' : 'update'](
             'Drinks',
-            drink._id,
+            drink._id!,
             deleted ? undefined : { Volume: newVolume },
           ).then((updatedDrink) => [
             [
@@ -294,7 +304,7 @@ command(
 
 command('sum', 'Alias of list', function (what = '-1') {
   // eslint-disable-next-line prefer-rest-params
-  return commands.list.fn.apply(this, arguments)
+  return commands.list.fn.apply(this, arguments as any)
 })
 
 command(
@@ -322,7 +332,7 @@ command(
     return Promise.all([
       this.backend.table('Sessions'),
       searchPlaces(query, {
-        googlePlacesKey: this.config.googlePlacesKey,
+        googlePlacesKey: this.config.googlePlacesKey!,
         targetCount: resultsInt,
         minPrice: +minPrice,
         maxPrice: +maxPrice,
@@ -331,13 +341,16 @@ command(
       }),
     ]).then(([sessions, rows]) => {
       // Find latest session held at each Google Place ID
-      const sessionByPlaceId = sessions.reduce((obj, session) => {
-        const id = session.GooglePlaceID
-        if (id && (!obj[id] || obj[id].Start < session.Start)) {
-          obj[id] = session
-        }
-        return obj
-      }, {})
+      const sessionByPlaceId = sessions.reduce(
+        (obj, session) => {
+          const id = session.GooglePlaceID
+          if (id && (!obj[id] || obj[id].Start < session.Start)) {
+            obj[id] = session
+          }
+          return obj
+        },
+        {} as Record<string, Session>,
+      )
 
       // Inject latest session into each place
       rows.forEach((place) => {
@@ -371,9 +384,15 @@ command(
   async function (query) {
     const [sessions, places] = await Promise.all([
       this.backend.table('Sessions'),
-      findPlaces(query, { googlePlacesKey: this.config.googlePlacesKey }),
+      findPlaces(query, { googlePlacesKey: this.config.googlePlacesKey! }),
     ])
+
     const place = places[0]
+
+    if (!place) {
+      return rejectError(`No places found matching query \`${query}\``)
+    }
+
     const rows: any = []
     for (const session of sessions) {
       if (session.GooglePlaceID !== place.place_id) continue
@@ -422,11 +441,13 @@ command('maintenance', 'Runs various maintenance tasks', function () {
       const placesPromise = session.GooglePlaceID
         ? Promise.resolve()
         : findPlaces(query, {
-            googlePlacesKey: this.config.googlePlacesKey,
+            googlePlacesKey: this.config.googlePlacesKey!,
           })
 
       return placesPromise.then((places) => {
-        session = this.backend.placeToSession(places[0], session)
+        if (places?.[0]) {
+          session = this.backend.placeToSession(places[0], session)
+        }
         return this.backend.updateRecord(session)
       })
     })
@@ -459,7 +480,7 @@ command(
       }),
     ]).then(([adminUser, sessions, allDrinks]) => {
       const promises = []
-      const grouped = {}
+      const grouped: Record<string, Record<string, Drink[]>> = {}
 
       allDrinks.forEach((drink) => {
         const memberId = drink.Members[0]
@@ -477,7 +498,7 @@ command(
       sessions.sort((a, b) => a.Start.localeCompare(b.Start))
 
       for (const session of sessions) {
-        const sessionId = session._id
+        const sessionId = session._id!
         if (Object.prototype.hasOwnProperty.call(grouped, sessionId)) {
           if (deleted >= rowsInt) {
             break
@@ -498,7 +519,7 @@ command(
                 Volume: volumes.reduce((total, v) => total + v),
                 'Aggregated Volume': volumes.join('+'),
               })
-              delete aggregate.Id // Auto-incremented values are immutable
+              delete (aggregate as any).Id // Auto-incremented values are immutable
               deletedInSession += drinks.length - 1
               promises.push(
                 // Update aggregate first, then delete old rows
@@ -547,21 +568,27 @@ command('list', 'Lists drinks for a session/user', function (what = '-1') {
         sort: [{ field: 'Time', direction: 'asc' }],
       })
       .then((drinks) => {
-        const partitions = drinks.reduce((memo, drink) => {
-          const key = drink[groupingTable][0]
-          if (!memo[key]) {
-            memo[key] = []
-            memo[key].Value = 0
-            memo[key].Key = key
-            memo[key].Entity = groupingItems.find((it) => it._id === key)
-          }
-          memo[key].push(drink)
-          memo[key].Value += drink.Volume * f.drinkType(drink).multiplier
-          return memo
-        }, {})
+        const partitions = drinks.reduce(
+          (memo, drink) => {
+            const key = drink[groupingTable][0]
+            if (!memo[key]) {
+              memo[key] = [] as any
+              memo[key].Value = 0
+              memo[key].Key = key
+              memo[key].Entity = groupingItems.find((it) => it._id === key)
+            }
+            memo[key].push(drink)
+            memo[key].Value += drink.Volume * f.drinkType(drink).multiplier
+            return memo
+          },
+          {} as Record<
+            string,
+            Array<Drink> & { Value: number; Key: string; Entity: any }
+          >,
+        )
 
         const ranked: Array<Output> = Object.keys(partitions)
-          .map((key) => partitions[key])
+          .map((key: keyof typeof partitions) => partitions[key])
           .sort((a, b) => {
             return forSession
               ? // Multiple members shown => order by volume consumed
@@ -594,7 +621,7 @@ command(
           }
           throw err
         })
-      : Promise.resolve()
+      : Promise.resolve(null)
 
     return memberPromise
       .then((member) => {
@@ -604,14 +631,14 @@ command(
           throw new Error(`${member.Name} already signed up`)
         }
 
-        if (role !== 'Prospect' && !this.backend.isAdmin(member)) {
+        if (role !== 'Prospect' && !this.backend.isAdmin(member!)) {
           throw new Error('Only admins are allowed to add other members')
         }
 
         // Use discord user data to fill out any missing inputs
         if (this.user && !member) {
-          name = name || this.user.displayName || this.user.name
-          discordId = this.user.name
+          name ||= this.user.displayName || this.user.name
+          discordId = this.user.name // TODO: Avoid assigning discordId if already set on another user
         }
 
         // Validate inputs
@@ -630,7 +657,7 @@ command(
           .member(email)
           .then((existing) => {
             if (existing) {
-              throw new Error(`${member.Name} already signed up`)
+              throw new Error(`${existing.Name} already signed up`)
             }
           })
           .catch((err) =>
@@ -663,7 +690,9 @@ command('help', 'Lists available commands', function (command = '') {
   if (command) {
     const description = commands[command]?.description
     if (description) {
-      return [`*Usage:* \`pbot ${command}${args(command)}\` - ${description}`]
+      return [
+        `*Usage:* \`pbot ${command}${functionToArgsString(command)}\` - ${description}`,
+      ]
     } else {
       return [`Command not found: \`${command}\``]
     }
@@ -673,7 +702,7 @@ command('help', 'Lists available commands', function (command = '') {
     Object.keys(commands)
       .sort((a, b) => a.localeCompare(b))
       .map((command) => {
-        return `•  \`${command}${args(command)}\` - ${commands[command].description}`
+        return `•  \`${command}${functionToArgsString(command)}\` - ${commands[command].description}`
       }),
   )
 })
@@ -681,33 +710,36 @@ command('help', 'Lists available commands', function (command = '') {
 command(
   'raw',
   'Executes the given input without formatting its output',
-  function (...input) {
-    return execute.call(this, input).then((raw) => ({
+  function (...cmd) {
+    return execute.call(this, cmd).then((raw) => ({
       _type: 'RawResult',
       raw,
     }))
   },
 )
 
-function textMemberCommand(
-  table,
-  textColumn = 'Text',
-  memberColumn = 'Member',
+function textMemberCommand<Table extends TableName>(
+  table: Table,
+  textColumn: keyof EntityForTable<Table>,
+  memberColumn: keyof EntityForTable<Table>,
 ) {
   // Populates member
-  function formatResult(res) {
+  function formatResult(this: CommandContext, res: EntityForTable<Table>) {
     const promise =
-      res[memberColumn] && res[memberColumn].length
+      res[memberColumn] &&
+      Array.isArray(res[memberColumn]) &&
+      res[memberColumn].length
         ? this.backend.member(res[memberColumn][0])
         : Promise.resolve(null)
     return promise.then((member) => {
       const copy = Object.assign({}, res)
+      // @ts-ignore
       copy[memberColumn] = member
       return copy
     })
   }
 
-  return function (text = '', member = '') {
+  return function (this: CommandContext, text = '', member = '') {
     // List existing rows when no text is provided
     if (!text || isInt(text)) {
       return this.backend.table(table).then((rows) => {
@@ -728,7 +760,7 @@ function textMemberCommand(
         throw err
       })
       .then((member) => {
-        const data = {}
+        const data: any = {}
         data[textColumn] = text
         data[memberColumn] = member && [member._id]
         return this.backend.create(table, data)
@@ -737,9 +769,9 @@ function textMemberCommand(
   }
 }
 
-function assertAdminUser(context) {
+function assertAdminUser(context: CommandContext): Promise<Member | undefined> {
   if (!context.user) {
-    return Promise.resolve()
+    return Promise.resolve(undefined)
   }
   const message = `Only available to admins`
   return context.backend
@@ -763,6 +795,6 @@ function isInt(value: any): value is number {
   return parseInt(value, 10) == value
 }
 
-function rejectError(...args) {
-  return Promise.reject(new Error(...args))
+function rejectError(message: string) {
+  return Promise.reject(new Error(message))
 }

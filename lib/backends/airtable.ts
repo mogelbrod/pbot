@@ -1,15 +1,15 @@
 import Airtable from 'airtable'
 import { findInArray } from '../find-in-array.js'
+import {
+  TABLES,
+  type Backend,
+  type Config,
+  type EntityForTable,
+  type EntityType,
+  type TableName,
+} from '../types.js'
 import { omitUnderscored } from '../utils.js'
-import type { Backend, Config, EntityForTable, EntityType } from '../types.js'
 
-export const TABLES = [
-  'Members',
-  'Sessions',
-  'Drinks',
-  'Feedback',
-  'Quotes',
-] as const satisfies EntityType[]
 export const RELOADED_TABLES = [
   'Members',
   'Sessions',
@@ -27,9 +27,9 @@ export const LIST_ARGS = {
 } as const
 
 export function airtableBackend(config: Config): Backend {
-  const base = new Airtable({ apiKey: config.key }).base(config.base)
+  const base = new Airtable({ apiKey: config.key }).base(config.base!)
   const cache: Partial<Record<EntityType, any>> = {}
-  const inflight: Record<string, Promise<any>> = {}
+  const inflight: Record<string, Promise<any> | undefined> = {}
 
   const log = config.log || (() => {})
 
@@ -45,7 +45,7 @@ export function airtableBackend(config: Config): Backend {
           name += 's'
         }
         return name
-      }) as EntityType
+      }) as TableName
     },
 
     parseRecord(record) {
@@ -66,7 +66,7 @@ export function airtableBackend(config: Config): Backend {
     table(name, args = null, useCache = true) {
       const cacheable = !args
       name = self.tableName(name) as typeof name
-      args = args || LIST_ARGS[name as string]
+      args ||= LIST_ARGS[name as keyof typeof LIST_ARGS] as any
       if (!name || self.tableNames.indexOf(name) < 0) {
         throw new Error(`Unknown table '${name}'`)
       }
@@ -76,7 +76,7 @@ export function airtableBackend(config: Config): Backend {
       }
 
       if (cacheable && inflight[name]) {
-        return inflight[name]
+        return inflight[name] as any
       }
 
       let items: Array<EntityForTable<typeof name>> = []
@@ -84,7 +84,7 @@ export function airtableBackend(config: Config): Backend {
       const promise = new Promise<typeof items>((resolve, reject) => {
         log(`[Backend] Retrieving table ${name}`)
         base(name)
-          .select(args)
+          .select(args || undefined)
           .eachPage(
             (results, fetchNextPage) => {
               log(`[Backend] Got ${results.length} ${name} records`)
@@ -147,7 +147,7 @@ export function airtableBackend(config: Config): Backend {
         return Promise.reject(new Error('Invalid member query'))
       }
       query = query.toLowerCase()
-      const fields = ['_id', 'Name', 'Email']
+      const fields = ['_id', 'Name', 'Email'] as const
       return findInArray(members, query, fields, { recordType: 'member' })
     },
 
@@ -156,7 +156,7 @@ export function airtableBackend(config: Config): Backend {
       data = omitUnderscored(data)
 
       return new Promise((resolve, reject) => {
-        base(table).create(data, (err, res) => {
+        base(table).create(data, (err: any, res: any) => {
           if (err) {
             err.inputData = data
             return reject(err)
@@ -179,7 +179,7 @@ export function airtableBackend(config: Config): Backend {
       data = omitUnderscored(data)
 
       return new Promise((resolve, reject) => {
-        base(table).update(id, data, (err, res) => {
+        base(table).update(id, data, (err: any, res: any) => {
           if (err) {
             err.inputData = data
             return reject(err)
@@ -207,7 +207,8 @@ export function airtableBackend(config: Config): Backend {
           }
 
           if (cache[table]) {
-            cache[table] = cache[table].filter((row) => row._id !== id) || []
+            cache[table] =
+              cache[table].filter((row: any) => row._id !== id) || []
           }
 
           log(`[Backend] Deleted ${table} record ${id}`)

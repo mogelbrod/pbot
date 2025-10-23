@@ -7,13 +7,16 @@
  * @param predicate - Filter function called with `(key, value)`
  * @return Filtered copy of original object
  */
-export function filter(obj, predicate) {
-  return Object.keys(obj).reduce((filtered: Record<string, any>, key) => {
+export function filter<Obj extends Record<string, any>>(
+  obj: Obj,
+  predicate: (key: string, value: Obj[keyof Obj]) => boolean,
+): Obj {
+  return Object.keys(obj).reduce((filtered: Obj, key) => {
     if (predicate(key, obj[key])) {
-      filtered[key] = obj[key]
+      ;(filtered as any)[key] = obj[key]
     }
     return filtered
-  }, {})
+  }, {} as Obj)
 }
 
 /**

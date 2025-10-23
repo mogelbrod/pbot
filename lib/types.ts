@@ -18,30 +18,30 @@ export interface Backend {
   // config: any
   // data: Record<string, any>
   // inflight: Record<string, Promise<any>>
-  tableNames: readonly EntityType[]
-  tableName(str: string): EntityType
+  tableNames: readonly TableName[]
+  tableName(str: string): TableName
   parseRecord(record: any): any
-  table<E extends EntityType>(
+  table<E extends TableName>(
     name: E,
     args?: {
       fields?: Array<string>
       sort?: Array<{ field: string; direction?: 'asc' | 'desc' }>
       filterByFormula?: string
       maxRecords?: number
-    },
+    } | null,
     useCache?: boolean,
   ): Promise<EntityForTable<E>[]>
-  tables<T extends EntityType[]>(
+  tables<T extends TableName[]>(
     cache: boolean,
     ...names: T
-  ): Promise<{ [K in keyof T]: EntityForTable<T[K] & EntityType>[] }>
+  ): Promise<{ [K in keyof T]: EntityForTable<T[K] & TableName>[] }>
   session(index?: string | number): Promise<Session>
-  member(query: string | User): Promise<Member>
-  create(table: string, data: any): Promise<any>
+  member(query: string | User | undefined): Promise<Member>
+  create(table: TableName, data: any): Promise<any>
   updateRecord(record: any): Promise<any>
-  update(table: string, id: string, data: any): Promise<any>
+  update(table: TableName, id: string, data: any): Promise<any>
   deleteRecord(record: any): Promise<any>
-  delete(table: string, id: string): Promise<any>
+  delete(table: TableName, id: string): Promise<any>
   isAdmin(member: Member): boolean
   time(str: string | Date, seconds?: boolean): string
   date(str: string | Date): string
@@ -58,8 +58,11 @@ export type Output = string | number | Member | EntityUnion | Array<Output>
 
 export interface Entity {
   _type: string
-  _id?: string
-  _created?: Date
+}
+
+export interface TableEntity extends Entity {
+  _id: string
+  _created: Date
 }
 
 export type EntityUnion =
@@ -73,6 +76,15 @@ export type EntityUnion =
   | Session
 
 export type EntityType = EntityUnion['_type']
+
+export const TABLES = [
+  'Members',
+  'Sessions',
+  'Drinks',
+  'Feedback',
+  'Quotes',
+] as const satisfies EntityType[]
+export type TableName = (typeof TABLES)[number]
 
 export type EntityForTable<TableName extends EntityType> = Extract<
   EntityUnion,
@@ -89,18 +101,18 @@ export interface RawResult extends Entity {
   raw: unknown
 }
 
-export interface Drink extends Entity {
+export interface Drink extends TableEntity {
   _type: 'Drinks'
   Id: number
   Time: string // TODO: Date
   Type: string
   Volume: number
   'Aggregated Volume'?: string
-  Sessions?: any[] // TODO:
-  Members?: any[] // TODO:
+  Sessions: string[]
+  Members: string[]
 }
 
-export interface Member extends Entity {
+export interface Member extends TableEntity {
   _type: 'Members'
   Email: string
   SlackID?: string
@@ -108,27 +120,27 @@ export interface Member extends Entity {
   Name: string
   Joined: string // TODO: Date
   Role: string
-  Feedbacks?: any[] // TODO:
-  Quotes?: any[] // TODO:
-  Drinks?: any[] // TODO:
+  Feedbacks?: any[]
+  Quotes: string[]
+  Drinks: string[]
 }
 
-export interface Session extends Entity {
+export interface Session extends TableEntity {
   _type: 'Sessions'
   Start: string // TODO: Date
   Location: string
   Address: string
   GooglePlaceID?: string
-  Drinks?: any[] // TODO:
+  Drinks?: string[]
 }
 
-export interface Feedback extends Entity {
+export interface Feedback extends TableEntity {
   _type: 'Feedback'
   Author: Member
   Feedback: string
 }
 
-export interface Quote extends Entity {
+export interface Quote extends TableEntity {
   _type: 'Quotes'
   Author: Member
   Quote: string

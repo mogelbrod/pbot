@@ -11,8 +11,7 @@
      "backend": "baserow",
      "baserow": {
        "token": "BASEROW_DATABASE_TOKEN",
-       "url": "http://path-to-baserow-server/api",
-       "databaseId": 0
+       "url": "http://path-to-baserow-server/api"
      },
      "discord": {
        "token": "a.b.c",

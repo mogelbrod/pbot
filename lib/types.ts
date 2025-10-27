@@ -5,8 +5,6 @@ export interface Config {
     token: string
     /** Baserow host */
     url: string
-    /** Database ID */
-    databaseId: number
   }
   airtable?: {
     /** Airtable key */

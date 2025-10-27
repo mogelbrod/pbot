@@ -14,10 +14,8 @@ import { omitUnderscored } from '../utils.js'
 export function baserowBackend(config: Config): Backend {
   const cfg: Exclude<Config['baserow'], undefined> = config.baserow!
 
-  if (!cfg?.url || !cfg.token || !cfg.databaseId) {
-    throw new Error(
-      `{ token, url, databaseId } are required in cfg.databaseIdrow`,
-    )
+  if (!cfg?.url || !cfg.token) {
+    throw new Error(`{ token, url } are required in cfg.baserow`)
   }
 
   const log = config.log || (() => {})
@@ -71,7 +69,7 @@ export function baserowBackend(config: Config): Backend {
     reload = false,
   ): Promise<Record<string, number>> {
     if (tableIds && !reload) return tableIds
-    log(`[Backend] Listing tables for database ${cfg.databaseId}`)
+    log(`[Backend] Retrieving tables list`)
     const tables = await requestJSON<
       { id: number; name: string; order: string }[]
     >(`/database/tables/all-tables/`)

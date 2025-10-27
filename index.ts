@@ -1,6 +1,7 @@
 #!/usr/bin/env -S npx tsx
 import path from 'path'
 import { airtableBackend } from './lib/backends/airtable.js'
+import { baserowBackend } from './lib/backends/baserow.js'
 import { execute, type CommandContext } from './lib/commands.js'
 import * as format from './lib/format.js'
 import type { Config } from './lib/types.js'
@@ -68,7 +69,20 @@ void import(configPath, { with: { type: 'json' } }).then(
       )
     }
 
-    const backend = airtableBackend(config)
+    const backends = {
+      baserow: baserowBackend,
+      airtable: airtableBackend,
+    } as const
+
+    const backendFactory = backends[config.backend!]
+    if (!backendFactory) {
+      throw new Error(
+        `Unsupported backend: ${config.backend}, expected one of: ${Object.keys(backends).join(', ')}`,
+      )
+    }
+
+    log(`Initializing ${config.backend} backend`)
+    const backend = backendFactory(config)
     const context: CommandContext = {
       backend,
       config,

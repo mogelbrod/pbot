@@ -30,16 +30,13 @@ export interface Config {
 }
 
 export interface Backend {
-  // config: any
-  // data: Record<string, any>
-  // inflight: Record<string, Promise<any>>
   tableNames: readonly TableName[]
-  tableName(str: string): TableName
-  parseRecord(record: any): any
+  parseRecord<Entity = TableEntityUnion>(record: any): Entity | null
   table<E extends TableName>(
     name: E,
     args?: {
       fields?: Array<string>
+      exclude?: Array<string>
       sort?: Array<{ field: string; direction?: 'asc' | 'desc' }>
       filterByFormula?: string
       maxRecords?: number
@@ -52,12 +49,11 @@ export interface Backend {
   ): Promise<{ [K in keyof T]: EntityForTable<T[K] & TableName>[] }>
   session(index?: string | number): Promise<Session>
   member(query: string | User | undefined): Promise<Member>
-  create(table: TableName, data: any): Promise<any>
-  updateRecord(record: any): Promise<any>
-  update(table: TableName, id: string, data: any): Promise<any>
-  deleteRecord(record: any): Promise<any>
+  create(table: TableName, data: Record<string, any>): Promise<any>
+  updateRecord(record: TableEntityUnion): Promise<any>
+  update(table: TableName, id: string, data: Record<string, any>): Promise<any>
+  deleteRecord(record: TableEntityUnion): Promise<any>
   delete(table: TableName, id: string): Promise<any>
-  isAdmin(member: Member): boolean
   time(str: string | Date, seconds?: boolean): string
   date(str: string | Date): string
   placeToSession(place: any, session: any): any
@@ -80,15 +76,13 @@ export interface TableEntity extends Entity {
   _created: Date
 }
 
+export type TableEntityUnion = Drink | Member | Session | Feedback | Quote
+
 export type EntityUnion =
+  | TableEntityUnion
   | DiscordTag
-  | Drink
-  | Feedback
   | GooglePlace
-  | Member
-  | Quote
   | RawResult
-  | Session
 
 export type EntityType = EntityUnion['_type']
 
@@ -116,6 +110,14 @@ export interface RawResult extends Entity {
   raw: unknown
 }
 
+/**
+ * Backend implementation specific enum value.
+ * Use `enumValue(value)` to resolve to the string value.
+ */
+export type NestedEnum =
+  | string
+  | { _type?: TableName; _id?: string; value: string }
+
 export interface Drink extends TableEntity {
   _type: 'Drinks'
   Id: number
@@ -123,8 +125,8 @@ export interface Drink extends TableEntity {
   Type: string
   Volume: number
   'Aggregated Volume'?: string
-  Sessions: string[]
-  Members: string[]
+  Sessions: NestedEnum[]
+  Members: NestedEnum[]
 }
 
 export interface Member extends TableEntity {
@@ -134,10 +136,10 @@ export interface Member extends TableEntity {
   DiscordID?: string
   Name: string
   Joined: string // TODO: Date
-  Role: string
-  Feedbacks?: any[]
-  Quotes: string[]
-  Drinks: string[]
+  Role: NestedEnum
+  Feedbacks?: NestedEnum[]
+  Quotes: NestedEnum[]
+  Drinks: NestedEnum[]
 }
 
 export interface Session extends TableEntity {
@@ -146,7 +148,7 @@ export interface Session extends TableEntity {
   Location: string
   Address: string
   GooglePlaceID?: string
-  Drinks?: string[]
+  Drinks?: NestedEnum[]
 }
 
 export interface Feedback extends TableEntity {

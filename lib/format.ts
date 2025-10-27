@@ -1,6 +1,7 @@
 import { time, TimestampStyles, escapeMarkdown } from 'discord.js'
 import qs from 'query-string'
-import type { EntityUnion } from './types'
+import type { EntityUnion, NestedEnum } from './types'
+import { enumValue } from './backend'
 
 let isFancy = true
 
@@ -51,7 +52,7 @@ export function fancy(v: unknown, depth = 0): string {
         return volume + emoji
       }
       case 'Members':
-        return v.Name + (depth < 2 && v.Role ? ` (${v.Role})` : '')
+        return v.Name + (depth < 2 && v.Role ? ` (${enumValue(v.Role)})` : '')
       case 'Sessions':
         const url = placeURL(v.Location, v.GooglePlaceID)
         return `${linkify(v.Location, url)} (${date(v.Start, true)})`
@@ -276,9 +277,9 @@ const DRINK_TYPES = {
   },
 }
 
-export function drinkType(drink: string | { Type: string }) {
+export function drinkType(drink: string | { Type: NestedEnum }) {
   if (typeof drink === 'object') {
-    drink = drink.Type
+    drink = enumValue(drink.Type)
   }
   return (DRINK_TYPES as Record<string, any>)[drink] || DRINK_TYPES.Unknown
 }

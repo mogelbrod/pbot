@@ -25,6 +25,23 @@ export function filter<Obj extends Record<string, any>>(
  * @param obj - Object to filter
  * @return Copy of obj
  */
-export function omitUnderscored(obj: Record<string, any>) {
-  return filter(obj, (key) => !key.startsWith('_'))
+export function omitUnderscored<T extends Record<string, any>>(
+  obj: T,
+): Omit<T, UnderscoredKeys<T>> {
+  return filter(obj, (key) => !key.startsWith('_')) as Omit<
+    T,
+    UnderscoredKeys<T>
+  >
 }
+
+export type OmitUnderscored<T extends Record<string, any>> = Omit<
+  T,
+  UnderscoredKeys<T>
+>
+export type UnderscoredKeys<U> = {
+  [K in keyof U]: K extends string
+    ? K extends `_${string}`
+      ? K
+      : never
+    : never
+}[keyof U]

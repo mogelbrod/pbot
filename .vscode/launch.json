@@ -11,7 +11,8 @@
       "runtimeExecutable": "tsx",
       "console": "internalConsole",
       "skipFiles": [
-        "<node_internals>/**"
+        "<node_internals>/**",
+        "node_modules/**"
       ],
       "program": "${workspaceFolder}/index.ts",
       "args": [

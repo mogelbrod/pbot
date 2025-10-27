@@ -3,20 +3,30 @@
 ## Getting started
 
 1. Get your [Airtable API Key](https://airtable.com/account) and base ID
-2. Create a custom [Slack integration](https://YOUR-SLACK-TEAM.slack.com/apps/manage/custom-integrations) for the bot
+2. Create a custom [Discord application](https://discord.com/developers/applications) for the bot
 3. Generate an API token for the Slack integration
 4. Create `config.json` and insert the above keys:
    ```json
    {
-     "key": "AIRTABLE API KEY",
-     "base": "AIRTABLE BASE ID",
-     "slackToken": "SLACK API TOKEN"
+     "backend": "baserow",
+     "baserow": {
+       "token": "BASEROW_DATABASE_TOKEN",
+       "url": "http://path-to-baserow-server/api",
+       "databaseId": 0
+     },
+     "discord": {
+       "token": "a.b.c",
+       "defaultChannel": "DISCORD_CHANNEL_ID"
+     },
+     "google": {
+       "placesKey": "GOOGLE_PLACES_KEY"
+     }
    }
    ```
 5. Go nuts:
    ```
-   node . bot
+   npm start
    # or via CLI access:
-   node . start "Imaginary Pub"
-   node . drink 40 Beer user
+   npm run cli start "Imaginary Pub"
+   npm run cli . drink 40 Beer user
    ```

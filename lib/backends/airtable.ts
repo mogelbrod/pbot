@@ -6,28 +6,17 @@ import {
   type Config,
   type EntityForTable,
   type EntityType,
-  type TableName,
 } from '../types.js'
 import { omitUnderscored } from '../utils.js'
-
-export const RELOADED_TABLES = [
-  'Members',
-  'Sessions',
-] as const satisfies EntityType[]
-export const LIST_ARGS = {
-  Members: {
-    sort: [{ field: 'Name' }],
-    fields: 'Email DiscordID SlackID Name Joined Role'.split(' '),
-  },
-  Sessions: {
-    sort: [{ field: 'Start' }],
-    fields: 'Start Location Address GooglePlaceID'.split(' '),
-  },
-  Drinks: { sort: [{ field: 'Time' }] },
-} as const
+import { LIST_ARGS, RELOADED_TABLES, tableName } from '../backend.js'
 
 export function airtableBackend(config: Config): Backend {
-  const base = new Airtable({ apiKey: config.key }).base(config.base!)
+  if (!config.airtable?.base || !config.airtable.token) {
+    throw new Error(`{ token, base } are required in config.airtable`)
+  }
+  const base = new Airtable({ apiKey: config.airtable.token }).base(
+    config.airtable.base!,
+  )
   const cache: Partial<Record<EntityType, any>> = {}
   const inflight: Record<string, Promise<any> | undefined> = {}
 
@@ -36,16 +25,6 @@ export function airtableBackend(config: Config): Backend {
   const self: Backend = {
     get tableNames() {
       return TABLES
-    },
-
-    tableName(str) {
-      return str.replace(/^(.)(.+?)s?$/, (_, c, rest) => {
-        let name = c.toUpperCase() + rest.toLowerCase()
-        if (TABLES.indexOf(name) < 0) {
-          name += 's'
-        }
-        return name
-      }) as TableName
     },
 
     parseRecord(record) {
@@ -65,7 +44,7 @@ export function airtableBackend(config: Config): Backend {
 
     table(name, args = null, useCache = true) {
       const cacheable = !args
-      name = self.tableName(name) as typeof name
+      name = tableName(name) as typeof name
       args ||= LIST_ARGS[name as keyof typeof LIST_ARGS] as any
       if (!name || self.tableNames.indexOf(name) < 0) {
         throw new Error(`Unknown table '${name}'`)
@@ -88,7 +67,7 @@ export function airtableBackend(config: Config): Backend {
           .eachPage(
             (results, fetchNextPage) => {
               log(`[Backend] Got ${results.length} ${name} records`)
-              items = items.concat(results.map((r) => self.parseRecord(r)))
+              items = items.concat(results.map((r) => self.parseRecord<any>(r)))
               fetchNextPage() // triggers this function again, or the done function
             },
             (error) => {
@@ -152,7 +131,7 @@ export function airtableBackend(config: Config): Backend {
     },
 
     create(table, data) {
-      table = self.tableName(table)
+      table = tableName(table)
       data = omitUnderscored(data)
 
       return new Promise((resolve, reject) => {
@@ -162,8 +141,7 @@ export function airtableBackend(config: Config): Backend {
             return reject(err)
           }
           res = self.parseRecord(res)
-          data[table] = data[table] || []
-          data[table].push(res)
+          cache[table]?.push(res)
           log(`[Backend] Created ${table} record ${res._id}`)
           resolve(res)
         })
@@ -175,7 +153,7 @@ export function airtableBackend(config: Config): Backend {
     },
 
     update(table, id, data) {
-      table = self.tableName(table)
+      table = tableName(table)
       data = omitUnderscored(data)
 
       return new Promise((resolve, reject) => {
@@ -185,8 +163,11 @@ export function airtableBackend(config: Config): Backend {
             return reject(err)
           }
           res = self.parseRecord(res)
-          data[table] = data[table] || []
-          data[table].push(res)
+          if (cache[table]) {
+            cache[table] =
+              cache[table].filter((row: any) => row._id !== id) || []
+            cache[table].push(res)
+          }
           log(`[Backend] Updated ${table} record ${res._id}`)
           resolve(res)
         })
@@ -198,7 +179,7 @@ export function airtableBackend(config: Config): Backend {
     },
 
     delete(table, id) {
-      table = self.tableName(table)
+      table = tableName(table)
       return new Promise((resolve, reject) => {
         base(table).destroy(id, (err, res) => {
           if (err) {
@@ -215,15 +196,6 @@ export function airtableBackend(config: Config): Backend {
           resolve(res)
         })
       })
-    },
-
-    isAdmin(member) {
-      return (
-        member &&
-        ['President', 'Accountant', 'Board Member', 'SupPleb'].indexOf(
-          member.Role,
-        ) >= 0
-      )
     },
 
     // 2017-04-04T17:30:00.000Z => 2017-04-04 17:30[:00]

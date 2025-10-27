@@ -13,6 +13,8 @@ import type {
   User,
 } from './types.js'
 import type { GuildMember } from 'discord.js'
+import { isAdmin, enumValue, placeToSession } from './backend.js'
+import type { OmitUnderscored } from './utils.js'
 
 export interface CommandContext {
   config: Config
@@ -172,9 +174,10 @@ command('reload', 'Reloads all tables', function (...tables) {
 })
 
 command('start', 'Begins a new session', async function (location = 'Unknown') {
-  let session = {
+  let session: OmitUnderscored<Session> = {
     Start: new Date().toISOString(),
     Location: location,
+    Address: '',
   }
   return findPlaces(location, {
     googlePlacesKey: this.config.google!.placesKey!,
@@ -185,7 +188,7 @@ command('start', 'Begins a new session', async function (location = 'Unknown') {
     })
     .then((places) => {
       if (places && places[0]) {
-        session = this.backend.placeToSession(places[0], session)
+        session = placeToSession(places[0], session)
       }
       return this.backend.create('Sessions', session)
     })
@@ -282,13 +285,13 @@ command(
             )
           }
 
-          const newVolume = drink.Volume + intVolume
+          const newVolume = parseInt(drink.Volume as any, 10) + intVolume
           const deleted = newVolume <= 0
 
           return this.backend[deleted ? 'delete' : 'update'](
             'Drinks',
             drink._id!,
-            deleted ? undefined : { Volume: newVolume },
+            deleted ? (undefined as any) : { Volume: newVolume },
           ).then((updatedDrink) => [
             [
               deleted ? 'Deleted' : 'Updated',
@@ -462,6 +465,9 @@ command(
   'maintenance-compress',
   'Merges drinks in oldest sessions to free up Airtable rows',
   function (rows = '1') {
+    if (this.config.backend !== 'airtable') {
+      return `This command is only available when using the Airtable backend`
+    }
     let rowsInt = parseInt(String(rows), 10)
     if (!isInt(rows) || rowsInt < 1 || rowsInt > 100) {
       rowsInt = 1
@@ -483,9 +489,11 @@ command(
       const grouped: Record<string, Record<string, Drink[]>> = {}
 
       allDrinks.forEach((drink) => {
-        const memberId = drink.Members[0]
-        const sessionId = drink.Sessions[0]
-        if (!memberId || !sessionId) {
+        const member = drink.Members[0]
+        const session = drink.Sessions[0]
+        const memberId = typeof member === 'string' ? member : member.value
+        const sessionId = typeof session === 'string' ? session : session.value
+        if (!member || !session) {
           this.output([`Drink with empty session/member: #${drink.Id}`])
           return
         }
@@ -559,9 +567,12 @@ command('list', 'Lists drinks for a session/user', function (what = '-1') {
   ]).then((res) => {
     const parent = res[0]
     const groupingItems = res[1]
-    const parentId = forSession
-      ? this.backend.time((parent as Session).Start)
-      : (parent as Member).Email
+    const parentId =
+      this.config.backend === 'baserow'
+        ? parent._id
+        : forSession
+          ? this.backend.time((parent as Session).Start)
+          : (parent as Member).Email
     return this.backend
       .table('Drinks', {
         filterByFormula: `${parent._type} = '${parentId}'`,
@@ -570,12 +581,12 @@ command('list', 'Lists drinks for a session/user', function (what = '-1') {
       .then((drinks) => {
         const partitions = drinks.reduce(
           (memo, drink) => {
-            const key = drink[groupingTable][0]
+            const key = enumValue(drink[groupingTable][0], true)
             if (!memo[key]) {
               memo[key] = [] as any
               memo[key].Value = 0
               memo[key].Key = key
-              memo[key].Entity = groupingItems.find((it) => it._id === key)
+              memo[key].Entity = groupingItems.find((it) => key === it._id)
             }
             memo[key].push(drink)
             memo[key].Value += drink.Volume * f.drinkType(drink).multiplier
@@ -631,7 +642,7 @@ command(
           throw new Error(`${member.Name} already signed up`)
         }
 
-        if (role !== 'Prospect' && !this.backend.isAdmin(member!)) {
+        if (role !== 'Prospect' && !isAdmin(member!)) {
           throw new Error('Only admins are allowed to add other members')
         }
 
@@ -777,7 +788,7 @@ function assertAdminUser(context: CommandContext): Promise<Member | undefined> {
   return context.backend
     .member(context.user)
     .then((member) => {
-      if (context.backend.isAdmin(member)) {
+      if (isAdmin(member)) {
         return Promise.resolve(member)
       }
       throw new Error(message)

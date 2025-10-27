@@ -69,7 +69,7 @@ export function startBot(cfg: {
 
     void message.channel.sendTyping()
 
-    const output = async (res: Output) => {
+    async function output(res: Output) {
       const formatted = format.fancy(res)
       const { length } = formatted
       const maxLength = 2000

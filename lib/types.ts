@@ -1,14 +1,29 @@
 export interface Config {
-  /** Airtable key */
-  key?: string
-  /** Airtable base */
-  base?: string
-  /** Discord access token */
-  discordToken?: string
-  /** Discord default channel ID */
-  disrcordDefaultChannel?: string
-  /** Google Places private key */
-  googlePlacesKey?: string
+  backend?: 'baserow' | 'airtable'
+  baserow?: {
+    /** Baserow databse token */
+    token: string
+    /** Baserow host */
+    url: string
+    /** Database ID */
+    databaseId: number
+  }
+  airtable?: {
+    /** Airtable key */
+    token: string
+    /** Airtable base */
+    base: string
+  }
+  discord?: {
+    /** Discord access token */
+    token: string
+    /** Discord default channel ID */
+    defaultChannel: string
+  }
+  google?: {
+    /** Google Places private key */
+    placesKey?: string
+  }
 
   /** Logger */
   log?(...args: any[]): void

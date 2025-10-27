@@ -177,7 +177,7 @@ command('start', 'Begins a new session', async function (location = 'Unknown') {
     Location: location,
   }
   return findPlaces(location, {
-    googlePlacesKey: this.config.googlePlacesKey!,
+    googlePlacesKey: this.config.google!.placesKey!,
   })
     .catch((error) => {
       this.output(error)
@@ -332,7 +332,7 @@ command(
     return Promise.all([
       this.backend.table('Sessions'),
       searchPlaces(query, {
-        googlePlacesKey: this.config.googlePlacesKey!,
+        googlePlacesKey: this.config.google!.placesKey!,
         targetCount: resultsInt,
         minPrice: +minPrice,
         maxPrice: +maxPrice,
@@ -384,7 +384,7 @@ command(
   async function (query) {
     const [sessions, places] = await Promise.all([
       this.backend.table('Sessions'),
-      findPlaces(query, { googlePlacesKey: this.config.googlePlacesKey! }),
+      findPlaces(query, { googlePlacesKey: this.config.google!.placesKey! }),
     ])
 
     const place = places[0]
@@ -441,7 +441,7 @@ command('maintenance', 'Runs various maintenance tasks', function () {
       const placesPromise = session.GooglePlaceID
         ? Promise.resolve()
         : findPlaces(query, {
-            googlePlacesKey: this.config.googlePlacesKey!,
+            googlePlacesKey: this.config.google!.placesKey!,
           })
 
       return placesPromise.then((places) => {

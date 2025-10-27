@@ -3,6 +3,7 @@ import path from 'path'
 import { airtableBackend } from './lib/backends/airtable.js'
 import { execute, type CommandContext } from './lib/commands.js'
 import * as format from './lib/format.js'
+import type { Config } from './lib/types.js'
 
 const args = process.argv.slice(2)
 
@@ -37,11 +38,36 @@ function log(...args: any[]) {
 const configPath = path.resolve(options.config)
 
 void import(configPath, { with: { type: 'json' } }).then(
-  (configModule: any) => {
+  (configModule: { default: Config }) => {
     if (!configModule.default || typeof configModule.default !== 'object') {
       throw new Error('Config must be an object')
     }
     const config = Object.assign({ log }, configModule.default)
+
+    const requiredFields = [
+      'discord.token',
+      'discord.defaultChannel',
+      'backend',
+      (config.backend || 'baserow') + '.token',
+    ]
+    const missingFields = requiredFields.filter((field) => {
+      const parts = field.split('.')
+      let obj: any = config
+      for (const part of parts) {
+        if (obj && typeof obj === 'object' && part in obj) {
+          obj = obj[part]
+        } else {
+          return true
+        }
+      }
+      return false
+    })
+    if (missingFields.length) {
+      throw new Error(
+        `Missing required config.json value(s):\n\t${missingFields.join('\n\t')}`,
+      )
+    }
+
     const backend = airtableBackend(config)
     const context: CommandContext = {
       backend,
@@ -70,8 +96,8 @@ void import(configPath, { with: { type: 'json' } }).then(
     // Bot server mode
     return import('./lib/bot.js').then(({ startBot }) =>
       startBot({
-        token: config.discordToken,
-        defaultChannel: config.discordDefaultChannel,
+        token: config.discord!.token,
+        defaultChannel: config.discord!.defaultChannel,
         context,
         execute,
       }),

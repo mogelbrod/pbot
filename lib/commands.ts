@@ -721,7 +721,7 @@ command('help', 'Lists available commands', function (command = '') {
 const startTime = Date.now()
 command('status', 'Displays pbot status information', function () {
   return [
-    ['Started', f.date(startTime)],
+    ['Started', f.date(startTime, true)],
     ['Backend', this.config.backend],
   ].map((item) => `•  ${f.bold(item[0] + ':')} ${item[1]}`)
 })

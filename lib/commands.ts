@@ -718,6 +718,14 @@ command('help', 'Lists available commands', function (command = '') {
   )
 })
 
+const startTime = Date.now()
+command('status', 'Displays pbot status information', function () {
+  return [
+    ['Started', f.date(startTime)],
+    ['Backend', this.config.backend],
+  ].map((item) => `•  ${f.bold(item[0] + ':')} ${item[1]}`)
+})
+
 command(
   'raw',
   'Executes the given input without formatting its output',

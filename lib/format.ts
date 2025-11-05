@@ -1,6 +1,6 @@
 import { time, TimestampStyles, escapeMarkdown } from 'discord.js'
 import qs from 'query-string'
-import type { EntityUnion, NestedEnum } from './types'
+import type { EntityUnion, ListResult, NestedEnum, Output } from './types'
 import { enumValue } from './backend'
 
 let isFancy = true
@@ -57,9 +57,9 @@ export function fancy(v: unknown, depth = 0): string {
         const url = placeURL(v.Location, v.GooglePlaceID)
         return `${linkify(v.Location, url)} (${date(v.Start, true)})`
       case 'Feedback':
-        return `"${v.Feedback}" - ${fancy(v.Author, 2)} (${date(v._created, true)})`
+        return `${wrap('_', v.Feedback)} — ${fancy(v.Author, 2)} (${date(v._created, true)})`
       case 'Quotes':
-        return `"${v.Quote}" - ${fancy(v.Author, 2)} (${date(v._created, true)})`
+        return `"${v.Quote}" — ${fancy(v.Author, 2)} (${date(v._created, true)})`
       case 'GooglePlace': {
         const address = (v.formatted_address || v.vicinity || '').replace(
           /, .+/,
@@ -75,6 +75,8 @@ export function fancy(v: unknown, depth = 0): string {
       case 'RawResult':
         v = v.raw
         break
+      case 'ListResult':
+        return v.items.map((x) => '- ' + fancy(x, depth + 1)).join('\n')
     }
   } else {
     switch ({}.toString.call(v).slice(8, -1)) {
@@ -107,16 +109,24 @@ export function wrap(delimeter: string, ...parts: string[]): string {
     )
   }
   let str = parts.join(' ')
-  if (delimeter === '') {
+  if (delimeter === '' || basic()) {
     return str
   }
   const delimeterRegex = new RegExp(escapeRegExp(delimeter), 'g')
   str = str.replace(delimeterRegex, '\\' + delimeter)
-  return basic() ? str : delimeter + str + delimeter
+  return delimeter + str + delimeter
 }
 
 export const bold = wrap.bind(null, '**')
+export const italic = wrap.bind(null, '*')
 export const code = wrap.bind(null, '`')
+
+export function list(items: Output[]): ListResult {
+  return {
+    _type: 'ListResult',
+    items,
+  }
+}
 
 export function toFixed(
   number: number | undefined | null,

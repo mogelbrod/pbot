@@ -81,6 +81,7 @@ export type EntityUnion =
   | DiscordTag
   | GooglePlace
   | RawResult
+  | ListResult
 
 export type EntityType = EntityUnion['_type']
 
@@ -106,6 +107,11 @@ export interface DiscordTag extends Entity {
 export interface RawResult extends Entity {
   _type: 'RawResult'
   raw: unknown
+}
+
+export interface ListResult extends Entity {
+  _type: 'ListResult'
+  items: Output[]
 }
 
 /**

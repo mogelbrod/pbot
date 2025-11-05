@@ -129,25 +129,30 @@ command(
   },
 )
 
-command('sessions', 'Lists most recent/all sessions', function (limit = '10') {
-  let intLimit = parseInt(String(limit), 10)
-  if (!isInt(intLimit) || intLimit < 0) {
-    intLimit = 0
-  }
+command(
+  'sessions',
+  'Lists most recent/all sessions',
+  async function (limit = '10') {
+    let intLimit = parseInt(String(limit), 10)
+    if (!isInt(intLimit) || intLimit < 0) {
+      intLimit = 0
+    }
 
-  return this.backend.table('Sessions', null, false).then((sessions) => {
+    let sessions = await this.backend.table('Sessions', null, false)
+    const rows: Output[] = []
     if (intLimit) {
       const total = sessions.length
       sessions = sessions.slice(-intLimit)
       if (intLimit < total) {
-        sessions.unshift(
+        rows.unshift(
           `Showing ${intLimit} of ${total} sessions (\`sessions all\` to see all)` as any,
         )
       }
     }
-    return sessions
-  })
-})
+    rows.push(f.list(sessions))
+    return rows
+  },
+)
 
 command(
   'member',
@@ -163,8 +168,9 @@ command(
   },
 )
 
-command('members', 'Lists all members', function () {
-  return this.backend.table('Members', null, false)
+command('members', 'Lists all members', async function () {
+  const members = await this.backend.table('Members', null, false)
+  return f.list(members)
 })
 
 command('reload', 'Reloads all tables', function (...tables) {
@@ -317,7 +323,7 @@ command(
     query = '',
     price = '0-4',
     openNow = 'no',
-    results = '20',
+    results = '10',
     radius = '5000',
   ) {
     // Sanitize arguments
@@ -375,8 +381,7 @@ command(
         .filter(Boolean)
         .join(' ')
 
-      rows.unshift([f.wrap('*', header)])
-      return rows
+      return [[f.italic(header)], f.list(rows)]
     })
   },
 )
@@ -403,8 +408,7 @@ command(
     }
 
     rows.unshift([
-      f.wrap(
-        '*',
+      f.italic(
         rows.length
           ? `${rows.length} session(s) at this place:`
           : `No sessions at this place`,
@@ -702,28 +706,38 @@ command('help', 'Lists available commands', function (command = '') {
     const description = commands[command]?.description
     if (description) {
       return [
-        `*Usage:* \`pbot ${command}${functionToArgsString(command)}\` - ${description}`,
+        `Usage: ${f.code(`pbot ${command}${functionToArgsString(command)}`)} — ${f.escape(description)}`,
       ]
     } else {
       return [`Command not found: \`${command}\``]
     }
   }
 
-  return ['*Usage:* `pbot COMMAND [ARGS...]`', 'Available commands:'].concat(
-    Object.keys(commands)
-      .sort((a, b) => a.localeCompare(b))
-      .map((command) => {
-        return `•  \`${command}${functionToArgsString(command)}\` - ${commands[command].description}`
-      }),
-  )
+  return [
+    `Usage: ${f.code('pbot COMMAND [ARGS...]')}`,
+    'Available commands:',
+    f.list(
+      Object.keys(commands)
+        .sort((a, b) => a.localeCompare(b))
+        .map((command) => {
+          return (
+            f.code(command + functionToArgsString(command)) +
+            ' — ' +
+            f.escape(commands[command].description)
+          )
+        }),
+    ),
+  ]
 })
 
 const startTime = Date.now()
 command('status', 'Displays pbot status information', function () {
-  return [
-    ['Started', f.date(startTime, true)],
-    ['Backend', this.config.backend],
-  ].map((item) => `•  ${f.bold(item[0] + ':')} ${item[1]}`)
+  return f.list(
+    [
+      ['Started', f.date(startTime, true)],
+      ['Backend', this.config.backend],
+    ].map((item) => f.bold(item[0] + ':') + ' ' + item[1]),
+  )
 })
 
 command(
@@ -742,35 +756,38 @@ function textMemberCommand<Table extends TableName>(
   textColumn: keyof EntityForTable<Table>,
   memberColumn: keyof EntityForTable<Table>,
 ) {
-  // Populates member
-  function formatResult(this: CommandContext, res: EntityForTable<Table>) {
-    const promise =
-      res[memberColumn] &&
-      Array.isArray(res[memberColumn]) &&
-      res[memberColumn].length
-        ? this.backend.member(res[memberColumn][0])
-        : Promise.resolve(null)
-    return promise.then((member) => {
-      const copy = Object.assign({}, res)
-      // @ts-ignore
-      copy[memberColumn] = member
-      return copy
-    })
+  async function resolveMember(
+    ctx: CommandContext,
+    res: EntityForTable<Table>,
+  ) {
+    const authors = res[memberColumn]!
+    if (!authors || !Array.isArray(authors) || !authors.length) {
+      return res
+    }
+    const author = enumValue(authors[0])
+    const member = await ctx.backend.member(author)
+    return Object.assign({}, res, { [memberColumn]: member })
   }
 
-  return function (this: CommandContext, text = '', member = '') {
+  return async function textMemberCmd(
+    this: CommandContext,
+    text = '',
+    member = '',
+  ) {
     // List existing rows when no text is provided
     if (!text || isInt(text)) {
-      return this.backend.table(table).then((rows) => {
-        const slice = isInt(text)
-          ? rows.slice(-text)
-          : [rows[Math.floor(Math.random() * rows.length)]]
-        return Promise.all(slice.map(formatResult.bind(this)))
-      })
+      const rawRows = await this.backend.table(table)
+      const slice = isInt(text)
+        ? rawRows.slice(-text)
+        : [rawRows[Math.floor(Math.random() * rawRows.length)]]
+      const rows = await Promise.all(
+        slice.map((row) => resolveMember(this, row)),
+      )
+      return f.list(rows)
     }
 
     // Create new row attributed to some member
-    return this.backend
+    const resolvedMember = await this.backend
       .member(member || this.user)
       .catch((err) => {
         if (/Invalid member query/.test(err.message)) {
@@ -778,13 +795,12 @@ function textMemberCommand<Table extends TableName>(
         }
         throw err
       })
-      .then((member) => {
-        const data: any = {}
-        data[textColumn] = text
-        data[memberColumn] = member && [member._id]
-        return this.backend.create(table, data)
-      })
-      .then(formatResult.bind(this))
+
+    const data: any = {}
+    data[textColumn] = text
+    data[memberColumn] = resolvedMember && [resolvedMember._id]
+    const record = await this.backend.create(table, data)
+    return resolveMember(this, record)
   }
 }
 

@@ -125,7 +125,7 @@ export type NestedEnum =
 export interface Drink extends TableEntity {
   _type: 'Drinks'
   Id: number
-  Time: string // TODO: Date
+  Time: string
   Type: string
   Volume: number
   'Aggregated Volume'?: string
@@ -139,7 +139,7 @@ export interface Member extends TableEntity {
   SlackID?: string
   DiscordID?: string
   Name: string
-  Joined: string // TODO: Date
+  Joined: string
   Role: NestedEnum
   Feedbacks?: NestedEnum[]
   Quotes: NestedEnum[]
@@ -148,7 +148,7 @@ export interface Member extends TableEntity {
 
 export interface Session extends TableEntity {
   _type: 'Sessions'
-  Start: string // TODO: Date
+  Start: string
   Location: string
   Address: string
   GooglePlaceID?: string
@@ -157,14 +157,16 @@ export interface Session extends TableEntity {
 
 export interface Feedback extends TableEntity {
   _type: 'Feedback'
-  Author: Member
+  Author: Member[]
   Feedback: string
+  Time: string
 }
 
 export interface Quote extends TableEntity {
   _type: 'Quotes'
-  Author: Member
+  Author: Member[]
   Quote: string
+  Time: string
 }
 
 export interface GooglePlace extends Entity {

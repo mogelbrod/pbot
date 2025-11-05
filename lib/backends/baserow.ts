@@ -111,11 +111,18 @@ export function baserowBackend(config: Config): Backend {
             continue
           case 'order':
             continue
+          case 'Time':
+          case 'Start':
+            result._created = new Date(value as string)
+            break // also set the field
         }
         if (Array.isArray(value)) {
           ;(result as any)[key] = value.map((child) => {
             return child?.id
-              ? self.parseRecord({ _type: key, ...child })
+              ? self.parseRecord({
+                  _type: key === 'Author' ? 'Members' : key,
+                  ...child,
+                })
               : child
           })
         } else {

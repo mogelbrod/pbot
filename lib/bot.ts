@@ -4,17 +4,25 @@ import {
   Events,
   GatewayIntentBits,
   GuildMember,
+  GuildScheduledEventEntityType,
+  GuildScheduledEventPrivacyLevel,
   Partials,
 } from 'discord.js'
 import * as format from './format.js'
 import type { CommandContext } from './commands.js'
 import type { Output } from './types.js'
+import { fetchCalendarEvents, type GoogleEvent } from './google/calendar.js'
 
 export function startBot(cfg: {
   token: string
   defaultChannel?: string
   context: CommandContext
   execute: (this: CommandContext, input: string) => Promise<Output>
+  googleCalendar?: {
+    calendarId: string
+    intervalMinutes?: number
+    getToken: () => Promise<string>
+  }
 }): (channelId: string, content: string) => Promise<void> {
   if (typeof cfg !== 'object') {
     throw new Error('A config must be provided')
@@ -32,6 +40,7 @@ export function startBot(cfg: {
       GatewayIntentBits.GuildMembers,
       GatewayIntentBits.MessageContent,
       GatewayIntentBits.DirectMessages,
+      GatewayIntentBits.GuildScheduledEvents,
     ],
     partials: [Partials.Channel, Partials.Message],
   })
@@ -126,6 +135,121 @@ export function startBot(cfg: {
     }
   })
 
+  // Calendar sync functionality
+  if (cfg.googleCalendar) {
+    const syncConfig = cfg.googleCalendar
+    let syncTimeout: any
+    let syncErrorCount = 0
+
+    async function syncCalendarEvents() {
+      log('Syncing Discord events with Google Calendar...')
+      clearTimeout(syncTimeout)
+      syncTimeout = null
+      try {
+        const guild = client.guilds.cache.first()
+        if (!guild) {
+          log('No guild found, skipping calendar sync')
+          return
+        }
+        const timeMin = new Date()
+        const timeMax = new Date()
+        timeMax.setDate(timeMax.getDate() + 360)
+        const token = await syncConfig.getToken()
+        const googleEvents = await fetchCalendarEvents({
+          calendarId: syncConfig.calendarId,
+          token,
+          timeMin,
+          timeMax,
+        })
+        const discordEvents = await guild.scheduledEvents.fetch()
+        log(
+          `Got ${googleEvents.length} Google + ${discordEvents.size} Discord events`,
+        )
+        const matchedDiscordEvents = new Set<string>()
+        // Update or create Discord events from Google events
+        for (const googleEvent of googleEvents) {
+          // Skip events without start time
+          if (!googleEvent.start?.dateTime && !googleEvent.start?.date) {
+            log(`Skipping event "${googleEvent.summary}" - no start time`)
+            continue
+          }
+          const eventData = googleEventToDiscordEvent(googleEvent)
+          // Find existing Discord event by checking description for htmlLink
+          const discordEvent = discordEvents.find((discordEvent) =>
+            discordEvent.description?.includes(googleEvent.htmlLink),
+          )
+          if (discordEvent) {
+            // Skip events that are in the past
+            if (
+              (discordEvent.scheduledEndAt ||
+                discordEvent.scheduledStartAt ||
+                0) < timeMin
+            ) {
+              matchedDiscordEvents.add(discordEvent.id)
+              continue
+            }
+            matchedDiscordEvents.add(discordEvent.id)
+            const needsUpdate =
+              discordEvent.name !== eventData.name ||
+              discordEvent.description !== eventData.description ||
+              discordEvent.scheduledStartAt?.getTime() !==
+                eventData.scheduledStartTime.getTime() ||
+              discordEvent.scheduledEndAt?.getTime() !==
+                eventData.scheduledEndTime.getTime() ||
+              discordEvent.entityMetadata?.location !==
+                eventData.entityMetadata?.location
+            if (needsUpdate) {
+              await discordEvent.edit(eventData)
+              log(`Updated Discord event: ${googleEvent.summary}`)
+            }
+          } else {
+            await guild.scheduledEvents.create(eventData)
+            log(`Created Discord event: ${googleEvent.summary}`)
+          }
+        }
+
+        // Delete Discord events that are no longer in Google Calendar
+        // Only delete events that we created (contain htmlLink in description)
+        // Skip events that are in the past
+        for (const [id, discordEvent] of discordEvents) {
+          const hasHtmlLink = discordEvent.description?.includes(
+            'https://www.google.com/calendar/event?eid=',
+          )
+          const isInPast =
+            (discordEvent.scheduledEndAt ||
+              discordEvent.scheduledStartAt ||
+              0) < timeMin
+          if (hasHtmlLink && !matchedDiscordEvents.has(id) && !isInPast) {
+            await discordEvent.delete()
+            log(`Deleted Discord event: ${discordEvent.name}`)
+          }
+        }
+        log('Calendar sync completed')
+        syncErrorCount = 0
+      } catch (error: any) {
+        syncErrorCount += 1
+        log(`Calendar sync error #${syncErrorCount}`, error)
+      } finally {
+        if (syncErrorCount < 5 && syncConfig.intervalMinutes) {
+          syncTimeout = setTimeout(
+            syncCalendarEvents,
+            syncConfig.intervalMinutes * 60e3,
+          )
+          log(`Next calendar sync in ${syncConfig.intervalMinutes} min`)
+        }
+      }
+    }
+
+    // Run sync when bot is ready
+    client.on(Events.ClientReady, () => {
+      void syncCalendarEvents()
+    })
+
+    client.on(Events.Error, () => {
+      clearTimeout(syncTimeout)
+    })
+  }
+
   // Login to Discord
   void client.login(cfg.token)
 
@@ -145,4 +269,42 @@ export function startBot(cfg: {
 
   // Allow messages to be manually sent
   return message
+}
+
+/**
+ * Converts a Google Calendar event to Discord scheduled event parameters
+ */
+function googleEventToDiscordEvent(g: GoogleEvent) {
+  const startTime = new Date(g.start.dateTime || g.start.date)
+  const endTime =
+    g.end?.dateTime || g.end?.date
+      ? new Date(g.end.dateTime || g.end.date)
+      : new Date(startTime.getTime() + 60 * 60 * 1000) // Default 1 hour if no end time
+  const entityType = GuildScheduledEventEntityType.External
+  let location = g.location || 'TBD'
+  if (g.hangoutLink) {
+    location = g.hangoutLink
+  }
+  // Build description with Google Calendar link
+  let description = ''
+  if (g.description) {
+    // Truncate description if too long (Discord limit is 1000 chars)
+    description =
+      g.description.substring(0, 800) +
+      (g.description.length > 800 ? '...\n\n' : '\n\n')
+  }
+  description += format.linkify('View in Google Calendar', g.htmlLink)
+
+  return {
+    name: g.summary.substring(0, 100), // Discord limit
+    scheduledStartTime: startTime,
+    scheduledEndTime: endTime,
+    privacyLevel: GuildScheduledEventPrivacyLevel.GuildOnly,
+    entityType,
+    description: description.substring(0, 1000), // Discord limit
+    entityMetadata: {
+      location: location.substring(0, 100), // Discord limit
+    },
+    reason: 'Synced from Google Calendar',
+  }
 }

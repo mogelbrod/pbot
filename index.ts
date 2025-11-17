@@ -139,6 +139,14 @@ void import(configPath, { with: { type: 'json' } }).then(
         defaultChannel: config.discord!.defaultChannel,
         context,
         execute,
+        googleCalendar:
+          config.google?.calendarId && config.googleAuthToken
+            ? {
+                calendarId: config.google.calendarId,
+                getToken: config.googleAuthToken,
+                intervalMinutes: 10,
+              }
+            : undefined,
       }),
     )
   },

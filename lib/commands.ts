@@ -398,27 +398,23 @@ command(
       }),
     ])
     const place = places[0]
-
     if (!place) {
       return rejectError(`No places found matching query \`${query}\``)
     }
-
     const rows: any = []
     for (const session of sessions) {
       if (session.GooglePlaceID !== place.place_id) continue
       rows.push(['🗓', new Date(session.Start)])
     }
-
-    rows.unshift([
+    return [
+      place,
       f.italic(
         rows.length
           ? `${rows.length} session(s) at this place:`
           : `No sessions at this place`,
       ),
-    ])
-
-    rows.unshift(place)
-    return rows
+      f.list(rows),
+    ]
   },
 )
 

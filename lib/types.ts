@@ -1,3 +1,5 @@
+import type { GoogleEvent } from './google/calendar'
+
 export interface Config {
   backend?: 'baserow' | 'airtable'
   baserow?: {
@@ -21,7 +23,25 @@ export interface Config {
   google?: {
     /** Google Places private key */
     placesKey?: string
+    /** Google Calendar ID (looks like an email) */
+    calendarId?: string
+    serviceAccount?: {
+      type: string
+      project_id: string
+      private_key_id: string
+      private_key: string
+      client_email: string
+      client_id: string
+      auth_uri: string
+      token_uri: string
+      auth_provider_x509_cert_url: string
+      client_x509_cert_url: string
+      universe_domain: string
+    }
   }
+
+  /** Method to get valid Google Authorization token using above `google.serviceAccount` */
+  googleAuthToken?: () => Promise<string>
 
   /** Logger */
   log?(...args: any[]): void
@@ -80,6 +100,7 @@ export type EntityUnion =
   | TableEntityUnion
   | DiscordTag
   | GooglePlace
+  | GoogleEvent
   | RawResult
   | ListResult
 

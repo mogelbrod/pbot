@@ -72,6 +72,14 @@ export function fancy(v: unknown, depth = 0): string {
           (v.Session ? ` 🗓 ${date(v.Session.Start)}` : '')
         )
       }
+      case 'GoogleEvent': {
+        const location = v.location?.replace(/, .+/, '')
+        return (
+          `🗓 ${date(v.start.dateTime || v.start.date, !!v.start.dateTime)}: ` +
+          bold(linkify(v.summary, v.htmlLink)) +
+          (location ? ` (${linkify(location, placeURL(v.location))})` : '')
+        )
+      }
       case 'RawResult':
         v = v.raw
         break
@@ -212,10 +220,15 @@ export function date(
   }
 
   // Discord formatted timestamp
-  return time(
-    date,
-    includeTime ? TimestampStyles.ShortDateTime : TimestampStyles.ShortDate,
-  )
+  // Format date + time as two separate parts for more consistent length
+  const shortDate = time(date, TimestampStyles.ShortDate)
+  return includeTime
+    ? shortDate + ' ' + time(date, TimestampStyles.ShortTime)
+    : shortDate
+  // return time(
+  //   date,
+  //   includeTime ? TimestampStyles.ShortDateTime : TimestampStyles.ShortDate,
+  // )
 }
 
 export function linkify(text: string, url?: string | null): string {
@@ -253,7 +266,7 @@ export function placeURL(
   query: string,
   placeId?: string | null,
 ): string | null {
-  if (placeId == null) {
+  if (!query && !placeId) {
     return null
   }
   const queryString = qs.stringify({

@@ -5,6 +5,7 @@ import { baserowBackend } from './lib/backends/baserow.js'
 import { execute, type CommandContext } from './lib/commands.js'
 import * as format from './lib/format.js'
 import type { Config } from './lib/types.js'
+import { createGoogleAuth } from './lib/google/auth.js'
 
 const args = process.argv.slice(2)
 
@@ -43,7 +44,19 @@ void import(configPath, { with: { type: 'json' } }).then(
     if (!configModule.default || typeof configModule.default !== 'object') {
       throw new Error('Config must be an object')
     }
-    const config = Object.assign({ log }, configModule.default)
+    const config = Object.assign(
+      {
+        log,
+        googleAuthToken: (): Promise<string> => {
+          return Promise.reject(
+            new Error(
+              'Google auth not configured (`config.google.serviceAccount` missing)',
+            ),
+          )
+        },
+      },
+      configModule.default,
+    ) satisfies Config
 
     const requiredFields = [
       'discord.token',
@@ -90,6 +103,18 @@ void import(configPath, { with: { type: 'json' } }).then(
       output(res) {
         return console.log(format.fancy(res))
       },
+    }
+
+    // Configure Google auth if service account is provided
+    const googleSA = config.google?.serviceAccount
+    if (googleSA) {
+      log(`Initializing Google auth using service account`)
+      delete config.google!.serviceAccount
+      const { clientPromise, getToken } = createGoogleAuth(googleSA)
+      config.googleAuthToken = getToken
+      clientPromise
+        .then(() => log(`Initialized Google auth`))
+        .catch((error) => log(`Google auth error:`, error))
     }
 
     // CLI mode

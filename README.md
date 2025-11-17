@@ -4,26 +4,28 @@
 
 1. Get your [Airtable API Key](https://airtable.com/account) and base ID
 2. Create a custom [Discord application](https://discord.com/developers/applications) for the bot
-3. Generate an API token for the Slack integration
+3. Create a Google service account with access to the Google Calendar + JSON key (if calendar functionality is desired)
 4. Create `config.json` and insert the above keys:
-   ```json
+   ```jsonc
    {
      "backend": "baserow",
      "baserow": {
        "token": "BASEROW_DATABASE_TOKEN",
-       "url": "http://path-to-baserow-server/api"
+       "url": "http://path-to-baserow-server/api",
      },
      "discord": {
        "token": "a.b.c",
-       "defaultChannel": "DISCORD_CHANNEL_ID"
+       "defaultChannel": "DISCORD_CHANNEL_ID",
      },
      "google": {
-       "placesKey": "GOOGLE_PLACES_KEY"
-     }
+       "placesKey": "GOOGLE_PLACES_KEY",
+       "calendarId": "a18pp1o4bqjttupjmpl0uuped4@group.calendar.google.com",
+       "serviceAccount": null, // Replace with Google service account JSON file contents from step 3 here
+     },
    }
    ```
 5. Go nuts:
-   ```
+   ```sh
    npm start
    # or via CLI access:
    npm run cli start "Imaginary Pub"

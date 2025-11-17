@@ -1,7 +1,8 @@
 import fetch from 'node-fetch'
 import qs from 'query-string'
-import { addType } from './format.js'
-import type { GooglePlace } from './types.js'
+import { addType } from '../format.js'
+import type { GooglePlace } from '../types.js'
+import { assertToken } from './auth.js'
 
 export const TYPE = 'GooglePlace'
 const DEFAULT_LOCATION = '59.343,18.05'
@@ -34,16 +35,16 @@ export async function findPlaces(
     radius?: number
   },
 ): Promise<GooglePlace[]> {
-  assertKey(googlePlacesKey)
+  assertToken(googlePlacesKey)
 
   const url =
     'https://maps.googleapis.com/maps/api/place/findplacefromtext/json?' +
     qs.stringify({
+      key: googlePlacesKey,
       input: query,
       inputtype: 'textquery',
       locationsbias: 'circle:5000@59.332241,18.064516',
       fields: 'place_id,name,formatted_address',
-      key: googlePlacesKey,
     })
   const res = await fetch(url)
   const json: any = await res.json()
@@ -108,12 +109,12 @@ export function searchPlaces(
     targetCount = 0,
   } = options
 
-  assertKey(googlePlacesKey)
+  assertToken(googlePlacesKey)
 
   const params = {
+    key: googlePlacesKey,
     location,
     radius,
-    key: googlePlacesKey,
     type,
     minprice: minPrice,
     maxprice: maxPrice,
@@ -172,10 +173,4 @@ export function searchPlaces(
         })
       })
   )
-}
-
-function assertKey(key: unknown): asserts key is string {
-  if (typeof key !== 'string' || !key.length) {
-    throw new Error(`Missing required googlePlacesKey config value`)
-  }
 }

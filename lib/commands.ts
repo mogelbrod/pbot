@@ -1,6 +1,7 @@
 import ms from 'ms'
 import * as f from './format.js'
-import { findPlaces, searchPlaces } from './google-places.js'
+import { findPlaces, searchPlaces } from './google/places.js'
+import { fetchCalendarEvents } from './google/calendar.js'
 import type {
   Backend,
   Config,
@@ -392,9 +393,10 @@ command(
   async function (query) {
     const [sessions, places] = await Promise.all([
       this.backend.table('Sessions'),
-      findPlaces(query, { googlePlacesKey: this.config.google!.placesKey! }),
+      findPlaces(query, {
+        googlePlacesKey: this.config.google?.placesKey as string,
+      }),
     ])
-
     const place = places[0]
 
     if (!place) {
@@ -420,14 +422,47 @@ command(
   },
 )
 
-command('maintenance', 'Runs various maintenance tasks', function () {
-  this.output('Running maintenance tasks')
-  return this.backend.table('Sessions').then((sessions) => {
-    // Stats
-    let unchanged = 0
-    let changed = 0
+command(
+  'calendar',
+  'Displays calendar events from Google Calendar',
+  async function (future = '364', past = '0') {
+    const { google } = this.config
+    if (!google || !google.calendarId) {
+      throw new Error('Requires `config.google.{ calendarId, token }`')
+    }
+    const token = await this.config.googleAuthToken!()
+    const pastInt = clamp(toInt(past, -1), -364, 364)
+    const futureInt = clamp(toInt(future, 364), pastInt, 728)
+    const timeMin = new Date()
+    const timeMax = new Date()
+    timeMin.setDate(timeMin.getDate() - pastInt)
+    timeMin.setHours(0, 0, 0, 0)
+    timeMax.setDate(timeMax.getDate() + futureInt)
+    timeMax.setHours(0, 0, 0, 0)
+    const events = await fetchCalendarEvents({
+      calendarId: google.calendarId,
+      token,
+      timeMin,
+      timeMax,
+    })
+    return [
+      `Showing Google Calendar events from ${f.date(timeMin)} to ${f.date(timeMax)}`,
+      f.list(events),
+    ]
+  },
+)
 
-    const sessionUpdates = sessions.map((session) => {
+command('maintenance', 'Runs various maintenance tasks', async function () {
+  const token = await this.config.googleAuthToken!()
+  this.output('Running maintenance tasks')
+  const sessions = await this.backend.table('Sessions')
+
+  // Stats
+  let unchanged = 0
+  let changed = 0
+
+  await Promise.all(
+    sessions.map((session) => {
       const location = session.Location.trim()
 
       // Ignore complete records
@@ -447,9 +482,7 @@ command('maintenance', 'Runs various maintenance tasks', function () {
       // Only lookup place if not yet mapped
       const placesPromise = session.GooglePlaceID
         ? Promise.resolve()
-        : findPlaces(query, {
-            googlePlacesKey: this.config.google!.placesKey!,
-          })
+        : findPlaces(query, { googlePlacesKey: token })
 
       return placesPromise.then((places) => {
         if (places?.[0]) {
@@ -457,12 +490,12 @@ command('maintenance', 'Runs various maintenance tasks', function () {
         }
         return this.backend.updateRecord(session)
       })
-    })
+    }),
+  )
 
-    return Promise.all(sessionUpdates).then(() => [
-      `Maintenance completed: ${changed} sessions updated, ${unchanged} unchanged`,
-    ])
-  })
+  return [
+    `Maintenance completed: ${changed} sessions updated, ${unchanged} unchanged`,
+  ]
 })
 
 command(
@@ -828,6 +861,18 @@ function assertAdminUser(context: CommandContext): Promise<Member | undefined> {
 function isInt(value: any): value is number {
   // eslint-disable-next-line eqeqeq
   return parseInt(value, 10) == value
+}
+
+/** Parse value as int, returning fallback if invalid */
+function toInt(value: any, fallback: number): number {
+  const parsed = parseInt(value, 10)
+  // eslint-disable-next-line eqeqeq
+  return parsed == value ? parsed : fallback
+}
+
+/** Clamps value to [min, value, max] */
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max)
 }
 
 function rejectError(message: string) {

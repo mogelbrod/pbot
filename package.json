@@ -14,6 +14,7 @@
     "lint": "eslint . --fix",
     "lint-staged": "lint-staged",
     "test": "mocha",
+    "service": "tsx . --service bot",
     "service-install": "./install-system-service.sh",
     "service-logs": "journalctl --user -u pbot.service",
     "service-restart": "systemctl --user restart pbot",

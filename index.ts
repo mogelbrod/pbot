@@ -13,28 +13,31 @@ const args = process.argv.slice(2)
 const options = {
   config: './config.json',
   fancy: false,
+  service: false,
 }
 
 // Parse leading `--option(=value)` flags into `options` object
 let optionMatch: RegExpMatchArray | null
-while (args[0] && (optionMatch = args[0].match(/--(\w+)(?:=(.*))/))) {
+while (args[0] && (optionMatch = args[0].match(/--(\w+)(?:=(.*))?/))) {
   const option = optionMatch[1] as keyof typeof options
   let value: string | boolean | undefined = optionMatch[2]
   switch (typeof options[option]) {
     case 'boolean':
-      value = value === 'true' || value === '1'
+      value = value === 'true' || value === '1' || value === undefined
       break
-    case 'string':
-      ;(options as any)[option] = value
-      break
-    default:
+    case 'undefined':
       throw new Error(`Unknown option '${option}'`)
   }
+  ;(options as any)[option] = value
   args.shift()
 }
 
 function log(...args: any[]) {
-  console.log(format.log(...args))
+  console.log(
+    options.service
+      ? args.map(format.stringify).join(' ')
+      : format.log(...args),
+  )
 }
 
 const configPath = path.resolve(options.config)

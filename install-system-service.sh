@@ -22,7 +22,7 @@ AssertPathExists={root}
 Restart=always
 RestartSec=10
 WorkingDirectory={root}
-ExecStart=/usr/bin/env npm start
+ExecStart=/usr/bin/env npm run service
 
 [Install]
 WantedBy=default.target

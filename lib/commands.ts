@@ -25,6 +25,9 @@ export interface CommandContext {
   event?: unknown
   user?: User
   users?: GuildMember[]
+  serverInfo?: {
+    [key: string]: unknown
+  }
 }
 
 export type CommandFn = (
@@ -761,11 +764,15 @@ command('help', 'Lists available commands', function (command = '') {
 
 const startTime = Date.now()
 command('status', 'Displays pbot status information', function () {
+  const data = {
+    Started: f.date(startTime, true),
+    Backend: this.config.backend,
+    ...this.serverInfo,
+  }
   return f.list(
-    [
-      ['Started', f.date(startTime, true)],
-      ['Backend', this.config.backend],
-    ].map((item) => f.bold(item[0] + ':') + ' ' + item[1]),
+    Object.entries(data).map(
+      (item) => f.bold(item[0] + ':') + ' ' + f.fancy(item[1]),
+    ),
   )
 })
 

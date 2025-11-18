@@ -29,9 +29,10 @@ export function startBot(cfg: {
   }
 
   const log = cfg.context.log || ((...args: any[]) => console.log(...args))
-  let users: GuildMember[] = []
-
   log('[bot] Starting PBot')
+
+  const serverInfo: NonNullable<CommandContext['serverInfo']> = {}
+  let users: GuildMember[] = []
 
   const client = new Client({
     intents: [
@@ -45,7 +46,7 @@ export function startBot(cfg: {
     partials: [Partials.Channel, Partials.Message],
   })
 
-  client.once(Events.ClientReady, () => {
+  client.on(Events.ClientReady, () => {
     log(`[bot] Connected as ${client.user!.tag}`)
     client.guilds.cache.forEach((guild) => {
       void guild.members.fetch().then((members) => {
@@ -120,6 +121,7 @@ export function startBot(cfg: {
         displayName: message.member?.nickname || message.author.displayName,
       },
       output,
+      serverInfo,
     } satisfies CommandContext
 
     try {
@@ -230,6 +232,11 @@ export function startBot(cfg: {
         syncErrorCount += 1
         log(`[calendar] Sync error #${syncErrorCount}`, error)
       } finally {
+        serverInfo['Calendar synced at'] = new Date()
+        if (syncErrorCount) {
+          serverInfo['Calendar sync errors'] = syncErrorCount
+        }
+
         if (!syncConfig.intervalMinutes) {
           // log(`[calendar] Sync interval not set, not scheduling next sync`)
         } else if (syncErrorCount < 5) {

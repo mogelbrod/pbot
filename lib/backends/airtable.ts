@@ -61,12 +61,12 @@ export function airtableBackend(config: Config): Backend {
       let items: Array<EntityForTable<typeof name>> = []
 
       const promise = new Promise<typeof items>((resolve, reject) => {
-        log(`[Backend] Retrieving table ${name}`)
+        log(`[backend] Retrieving table ${name}`)
         base(name)
           .select(args || undefined)
           .eachPage(
             (results, fetchNextPage) => {
-              log(`[Backend] Got ${results.length} ${name} records`)
+              log(`[backend] Got ${results.length} ${name} records`)
               items = items.concat(results.map((r) => self.parseRecord<any>(r)))
               fetchNextPage() // triggers this function again, or the done function
             },
@@ -142,7 +142,7 @@ export function airtableBackend(config: Config): Backend {
           }
           res = self.parseRecord(res)
           cache[table]?.push(res)
-          log(`[Backend] Created ${table} record ${res._id}`)
+          log(`[backend] Created ${table} record ${res._id}`)
           resolve(res)
         })
       })
@@ -168,7 +168,7 @@ export function airtableBackend(config: Config): Backend {
               cache[table].filter((row: any) => row._id !== id) || []
             cache[table].push(res)
           }
-          log(`[Backend] Updated ${table} record ${res._id}`)
+          log(`[backend] Updated ${table} record ${res._id}`)
           resolve(res)
         })
       })
@@ -192,7 +192,7 @@ export function airtableBackend(config: Config): Backend {
               cache[table].filter((row: any) => row._id !== id) || []
           }
 
-          log(`[Backend] Deleted ${table} record ${id}`)
+          log(`[backend] Deleted ${table} record ${id}`)
           resolve(res)
         })
       })

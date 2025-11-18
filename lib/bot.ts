@@ -31,7 +31,7 @@ export function startBot(cfg: {
   const log = cfg.context.log || ((...args: any[]) => console.log(...args))
   let users: GuildMember[] = []
 
-  log('Starting PBot')
+  log('[bot] Starting PBot')
 
   const client = new Client({
     intents: [
@@ -46,10 +46,10 @@ export function startBot(cfg: {
   })
 
   client.once(Events.ClientReady, () => {
-    log(`Connected as ${client.user!.tag}`)
+    log(`[bot] Connected as ${client.user!.tag}`)
     client.guilds.cache.forEach((guild) => {
       void guild.members.fetch().then((members) => {
-        log(`Retrieved ${members.size} users from ${guild.name}`)
+        log(`[bot] Retrieved ${members.size} users from ${guild.name}`)
         users = [...members.values()]
       })
     })
@@ -57,7 +57,9 @@ export function startBot(cfg: {
 
   client.on(Events.GuildMemberAdd, (member) => {
     users.push(member)
-    log(`Adding newly joined user '${member.user.username}' to users list`)
+    log(
+      `[bot] Adding newly joined user '${member.user.username}' to users list`,
+    )
   })
 
   client.on(Events.MessageCreate, async (message) => {
@@ -74,7 +76,7 @@ export function startBot(cfg: {
     // Remove bot mention from message content
     const input = (prefix?.[2] ?? message.content).trim()
 
-    log(`Executing '${input}' triggered by ${message.author.username}`)
+    log(`[bot] Executing '${input}' triggered by ${message.author.username}`)
 
     void message.channel.sendTyping()
 
@@ -85,7 +87,7 @@ export function startBot(cfg: {
       let start = 0
 
       if (length > maxLength) {
-        log(`Sending message in ${Math.ceil(length / maxLength)} chunks`)
+        log(`[bot] Sending message in ${Math.ceil(length / maxLength)} chunks`)
       }
 
       while (start < length) {
@@ -126,7 +128,7 @@ export function startBot(cfg: {
         await output(result)
       }
     } catch (err: any) {
-      log(`Error when handling message: ${err.stack || err}`)
+      log(`[bot] Error when handling message: ${err.stack || err}`)
       const errorMessage = `**Error:** ${err.message || err}`.replace(
         /^Error: (\w*Error):/,
         '$1',
@@ -142,14 +144,12 @@ export function startBot(cfg: {
     let syncErrorCount = 0
 
     async function syncCalendarEvents() {
-      log('Syncing Discord events with Google Calendar...')
       clearTimeout(syncTimeout)
       syncTimeout = null
       try {
         const guild = client.guilds.cache.first()
         if (!guild) {
-          log('No guild found, skipping calendar sync')
-          return
+          throw new Error('No guild found, skipping calendar sync')
         }
         const timeMin = new Date()
         const timeMax = new Date()
@@ -163,14 +163,14 @@ export function startBot(cfg: {
         })
         const discordEvents = await guild.scheduledEvents.fetch()
         log(
-          `Got ${googleEvents.length} Google + ${discordEvents.size} Discord events`,
+          `[calendar] Got ${googleEvents.length} Google + ${discordEvents.size} Discord events`,
         )
         const matchedDiscordEvents = new Set<string>()
         // Update or create Discord events from Google events
         for (const googleEvent of googleEvents) {
           // Skip events without start time
           if (!googleEvent.start?.dateTime && !googleEvent.start?.date) {
-            log(`Skipping event "${googleEvent.summary}" - no start time`)
+            // log(`[calendar] Skipping event "${googleEvent.summary}" - no start time`)
             continue
           }
           const eventData = googleEventToDiscordEvent(googleEvent)
@@ -200,11 +200,11 @@ export function startBot(cfg: {
                 eventData.entityMetadata?.location
             if (needsUpdate) {
               await discordEvent.edit(eventData)
-              log(`Updated Discord event: ${googleEvent.summary}`)
+              log(`[calendar] Updated Discord event: ${googleEvent.summary}`)
             }
           } else {
             await guild.scheduledEvents.create(eventData)
-            log(`Created Discord event: ${googleEvent.summary}`)
+            log(`[calendar] Created Discord event: ${googleEvent.summary}`)
           }
         }
 
@@ -221,21 +221,27 @@ export function startBot(cfg: {
               0) < timeMin
           if (hasHtmlLink && !matchedDiscordEvents.has(id) && !isInPast) {
             await discordEvent.delete()
-            log(`Deleted Discord event: ${discordEvent.name}`)
+            log(`[calendar] Deleted Discord event: ${discordEvent.name}`)
           }
         }
-        log('Calendar sync completed')
+        // log('[calendar] Sync completed')
         syncErrorCount = 0
       } catch (error: any) {
         syncErrorCount += 1
-        log(`Calendar sync error #${syncErrorCount}`, error)
+        log(`[calendar] Sync error #${syncErrorCount}`, error)
       } finally {
-        if (syncErrorCount < 5 && syncConfig.intervalMinutes) {
+        if (!syncConfig.intervalMinutes) {
+          // log(`[calendar] Sync interval not set, not scheduling next sync`)
+        } else if (syncErrorCount < 5) {
           syncTimeout = setTimeout(
             syncCalendarEvents,
             syncConfig.intervalMinutes * 60e3,
           )
-          log(`Next calendar sync in ${syncConfig.intervalMinutes} min`)
+          // log(`[calendar] Next sync in ${syncConfig.intervalMinutes} min`)
+        } else {
+          log(
+            `[calendar] Not rescheduling sync due to repeated errors (${syncErrorCount})`,
+          )
         }
       }
     }
@@ -260,9 +266,9 @@ export function startBot(cfg: {
         throw new Error(`Invalid channel: ${channelId}`)
       }
       await channel.send(content)
-      log(`Posted message to channel ${channelId}`)
+      log(`[bot] Posted message to channel ${channelId}`)
     } catch (error) {
-      log('message() error:', error)
+      log('[bot] message() error:', error)
       throw error
     }
   }

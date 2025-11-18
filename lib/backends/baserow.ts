@@ -69,7 +69,7 @@ export function baserowBackend(config: Config): Backend {
     reload = false,
   ): Promise<Record<string, number>> {
     if (tableIds && !reload) return tableIds
-    log(`[Backend] Retrieving tables list`)
+    log(`[backend] Retrieving tables list`)
     const tables = await requestJSON<
       { id: number; name: string; order: string }[]
     >(`/database/tables/all-tables/`)
@@ -174,11 +174,11 @@ export function baserowBackend(config: Config): Backend {
 
       // eslint-disable-next-line no-async-promise-executor
       const promise = new Promise<typeof items>(async (resolve, reject) => {
-        log(`[Backend] Retrieving table ${name}`)
+        log(`[backend] Retrieving table ${name}`)
         let nextPageUrl = `/database/rows/table/${tableId}/?${params.toString()}`
 
         while (nextPageUrl) {
-          log(`[Backend] GET ${nextPageUrl}`)
+          log(`[backend] GET ${nextPageUrl}`)
           const data = await requestJSON<{
             results: Array<any>
             count: number
@@ -244,7 +244,7 @@ export function baserowBackend(config: Config): Backend {
           recordType: 'member',
         })
         if (member) return member
-        log(`[Backend] member(${JSON.stringify(query)}) lookup failed`)
+        log(`[backend] member(${JSON.stringify(query)}) lookup failed`)
       }
       if (typeof query !== 'string' || !query) {
         return Promise.reject(new Error('Invalid member query'))
@@ -267,7 +267,7 @@ export function baserowBackend(config: Config): Backend {
       )
       const result = self.parseRecord({ _type: table, ...response })
       cache[table]?.push(result)
-      log(`[Backend] Created ${table} record ${result?._id}`)
+      log(`[backend] Created ${table} record ${result?._id}`)
       return result
     },
 
@@ -291,7 +291,7 @@ export function baserowBackend(config: Config): Backend {
         cache[table] = cache[table].filter((row: any) => row._id !== id) || []
         cache[table].push(result)
       }
-      log(`[Backend] Updated ${table} record ${result?._id}`)
+      log(`[backend] Updated ${table} record ${result?._id}`)
       return result
     },
 
@@ -305,7 +305,7 @@ export function baserowBackend(config: Config): Backend {
       await requestJSON(`/database/rows/table/${tableId}/${id}/`, {
         method: 'DELETE',
       })
-      log(`[Backend] Deleted ${table} record ${id}`)
+      log(`[backend] Deleted ${table} record ${id}`)
       if (cache[table]) {
         cache[table] = cache[table].filter((row: any) => row._id !== id) || []
       }
@@ -335,10 +335,10 @@ export function baserowBackend(config: Config): Backend {
 
   ensureTableIds()
     .then((tableIds) => {
-      log('[Backend] Retrieved table IDs')
+      log('[backend] Retrieved table IDs')
     })
     .catch((err) => {
-      log('[Backend] Error: Unable to retrieve tables', err)
+      log('[backend] Error: Unable to retrieve tables', err)
     })
 
   return self

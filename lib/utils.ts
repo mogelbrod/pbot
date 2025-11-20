@@ -1,3 +1,17 @@
+import type { EntityType, EntityForTable, Obj } from './types'
+
+export function addType<T extends Obj | Obj[], Type extends EntityType>(
+  objectOrArray: T,
+  type: Type,
+): T extends Obj[] ? Array<EntityForTable<Type>> : EntityForTable<Type> {
+  if (Array.isArray(objectOrArray)) {
+    objectOrArray.forEach((obj) => addType(obj, type))
+  } else if (objectOrArray && typeof objectOrArray === 'object') {
+    objectOrArray._type = type
+  }
+  return objectOrArray as any
+}
+
 /**
  * Filter function for objects like array.filter().
  * Returns a copy of the original object that only includes properties that the
@@ -17,6 +31,25 @@ export function filter<Obj extends Record<string, any>>(
     }
     return filtered
   }, {} as Obj)
+}
+
+/**
+ * Type guard that filters out `null`, `undefined`, and empty strings.
+ * Can be used with `Array.prototype.filter`.
+ *
+ * @example
+ * ```ts
+ * const arr = ['a', 'b', '', null, undefined]
+ * const filtered = arr.filter(isPresent) // -> ['a', 'b']
+ * ```
+ *
+ * @param value - The value to check.
+ * @returns `true` if the value is not `null`, `undefined`, or `''`.
+ */
+export function isPresent<T>(
+  value: T,
+): value is Exclude<T, null | undefined | ''> {
+  return value !== null && value !== undefined && value !== ''
 }
 
 /**

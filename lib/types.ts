@@ -1,5 +1,7 @@
 import type { GoogleEvent } from './google/calendar'
 
+export type Obj = Record<string, any>
+
 export interface Config {
   backend?: 'baserow' | 'airtable'
   baserow?: {
@@ -83,7 +85,13 @@ export interface User {
   displayName?: string
 }
 
-export type Output = string | number | Member | EntityUnion | Array<Output>
+export type Output =
+  | string
+  | number
+  | Date
+  | Member
+  | EntityUnion
+  | Array<Output>
 
 export interface Entity {
   _type: string

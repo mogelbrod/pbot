@@ -2,6 +2,7 @@ import fetch from 'node-fetch'
 import qs from 'query-string'
 import type { Entity } from '../types'
 import { assertToken } from './auth'
+import { addType } from '../format'
 
 export async function fetchCalendarEvents({
   calendarId,
@@ -33,10 +34,7 @@ export async function fetchCalendarEvents({
     },
   )
   const data = (await response.json()) as GoogleEventsResponse
-  for (const event of data.items) {
-    event._type = 'GoogleEvent'
-  }
-  return data.items
+  return addType(data.items, 'GoogleEvent')
 }
 
 export interface GoogleEventsResponse {

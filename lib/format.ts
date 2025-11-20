@@ -247,17 +247,6 @@ export function DiscordTag(value: string) {
   }
 }
 
-type Obj = Record<string, any>
-
-export function addType<T extends Obj | Obj[]>(objectOrArray: T, type: any): T {
-  if (Array.isArray(objectOrArray)) {
-    objectOrArray.forEach((obj) => addType(obj, type))
-  } else if (objectOrArray && typeof objectOrArray === 'object') {
-    objectOrArray._type = type
-  }
-  return objectOrArray
-}
-
 export function luckyURL(query: string): string {
   return `http://www.google.com/search?q=${encodeURIComponent(query)}&btnI`
 }

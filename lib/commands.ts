@@ -15,7 +15,8 @@ import type {
 } from './types.js'
 import type { GuildMember } from 'discord.js'
 import { isAdmin, enumValue, placeToSession } from './backend.js'
-import type { OmitUnderscored } from './utils.js'
+import { isPresent, type OmitUnderscored } from './utils.js'
+import { getClosestVkoEntry, getVkoEntries } from './vko.js'
 
 export interface CommandContext {
   config: Config
@@ -323,15 +324,15 @@ command('sum', 'Alias of list', function (what = '-1') {
 command(
   'suggest',
   'Suggests establishments to visit',
-  function (
-    query = '',
+  async function (
+    query = 'pubs',
     price = '0-4',
     openNow = 'no',
     results = '10',
     radius = '5000',
   ) {
     // Sanitize arguments
-    query = ('pubs ' + query).trim()
+    query = query.trim()
     const resultsInt =
       isInt(results) && results > 0 && results < 100 ? results : 20
     const radiusInt = isInt(radius) && radius > 0 ? radius : 5000
@@ -341,8 +342,8 @@ command(
       minPrice = '0'
     }
     const isOpenNow = !!openNow && openNow !== 'no'
-
-    return Promise.all([
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    let [sessions, rows, vkoEntries] = await Promise.all([
       this.backend.table('Sessions'),
       searchPlaces(query, {
         googlePlacesKey: this.config.google!.placesKey!,
@@ -352,41 +353,41 @@ command(
         openNow: isOpenNow,
         radius: radiusInt,
       }),
-    ]).then(([sessions, rows]) => {
-      // Find latest session held at each Google Place ID
-      const sessionByPlaceId = sessions.reduce(
-        (obj, session) => {
-          const id = session.GooglePlaceID
-          if (id && (!obj[id] || obj[id].Start < session.Start)) {
-            obj[id] = session
-          }
-          return obj
-        },
-        {} as Record<string, Session>,
-      )
-
-      // Inject latest session into each place
-      rows.forEach((place) => {
-        place.Session = sessionByPlaceId[place.place_id]
-      })
-
-      if (rows.length > resultsInt) {
-        rows = rows.slice(0, resultsInt)
-      }
-
-      // Prepend with header
-      const link = f.linkify(query, f.placeURL(query, ''))
-      const header = [
-        `${rows.length} suggestions for "${link}"`,
-        (+minPrice > 1 || +maxPrice < 4) &&
-          `between 💵 ${minPrice}-${maxPrice}`,
-        openNow && `that are currently open`,
-      ]
-        .filter(Boolean)
-        .join(' ')
-
-      return [[f.italic(header)], f.list(rows)]
-    })
+      getVkoEntries(),
+    ])
+    if (rows.length > resultsInt) {
+      rows = rows.slice(0, resultsInt)
+    }
+    // Find latest session held at each Google Place ID
+    const sessionByPlaceId = sessions.reduce(
+      (obj, session) => {
+        const id = session.GooglePlaceID
+        if (id && (!obj[id] || obj[id].Start < session.Start)) {
+          obj[id] = session
+        }
+        return obj
+      },
+      {} as Record<string, Session>,
+    )
+    // Inject additional info into each place
+    for (const place of rows) {
+      place.Session = sessionByPlaceId[place.place_id]
+      const location = place.geometry?.location
+      place.VkoEntry =
+        location?.lat && location.lng
+          ? await getClosestVkoEntry(location.lat, location.lng, 10)
+          : undefined
+    }
+    // Prepend with header
+    const link = f.linkify(query, f.placeURL(query, ''))
+    const header = [
+      `${rows.length} suggestions for "${link}"`,
+      (+minPrice > 1 || +maxPrice < 4) && `between 💵 ${minPrice}-${maxPrice}`,
+      isOpenNow && `that are currently open`,
+    ]
+      .filter(Boolean)
+      .join(' ')
+    return [[f.italic(header)], f.list(rows)]
   },
 )
 
@@ -394,30 +395,40 @@ command(
   'place',
   'Displays info for a given Google place',
   async function (query) {
-    const [sessions, places] = await Promise.all([
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const [allSessions, places, vkoEntries] = await Promise.all([
       this.backend.table('Sessions'),
       findPlaces(query, {
         googlePlacesKey: this.config.google?.placesKey as string,
       }),
+      getVkoEntries(),
     ])
     const place = places[0]
     if (!place) {
       return rejectError(`No places found matching query \`${query}\``)
     }
-    const rows: any = []
-    for (const session of sessions) {
+    const sessions: Output[] = []
+    for (const session of allSessions) {
       if (session.GooglePlaceID !== place.place_id) continue
-      rows.push(['🗓', new Date(session.Start)])
+      sessions.push(['🗓', new Date(session.Start)])
     }
+
+    const location = place.geometry?.location
+    const vkoEntry =
+      location?.lat && location.lng
+        ? await getClosestVkoEntry(location.lat, location.lng, 10)
+        : null
+
     return [
       place,
+      vkoEntry,
       f.italic(
-        rows.length
-          ? `${rows.length} session(s) at this place:`
+        sessions.length
+          ? `${sessions.length} session(s) at this place:`
           : `No sessions at this place`,
       ),
-      f.list(rows),
-    ]
+      f.list(sessions),
+    ].filter(isPresent)
   },
 )
 

@@ -69,7 +69,8 @@ export function fancy(v: unknown, depth = 0): string {
           `[💵 ${v.price_level || '?'} ⭐️ ${toFixed(v.rating, 1, '?')}] ` +
           bold(linkify(v.name, placeURL(v.name, v.place_id))) +
           (address ? ` (${address})` : '') +
-          (v.Session ? ` 🗓 ${date(v.Session.Start)}` : '')
+          (v.Session ? ` 🗓 ${date(v.Session.Start)}` : '') +
+          (v.VkoEntry ? ' ' + fancy(v.VkoEntry, depth + 1) : '')
         )
       }
       case 'GoogleEvent': {
@@ -79,6 +80,21 @@ export function fancy(v: unknown, depth = 0): string {
           bold(linkify(v.summary, v.htmlLink)) +
           (location ? ` (${linkify(location, placeURL(v.location))})` : '')
         )
+      }
+      case 'VkoEntry': {
+        let str = `🍺 ${v.beerPrice}kr`
+        if (v.happyHour) {
+          str += ` / ${v.happyHour.allDays ? 'happy-hour' : 'weekdays'}: `
+          let comma = false
+          for (const r of [v, ...(v.rows || [])]) {
+            const hh = r.happyHour
+            if (!hh) continue
+            if (comma) str += ', '
+            str += hh.price ? `${hh.price}kr ${hh.from || ''}—${hh.to}` : hh.to
+            comma = true
+          }
+        }
+        return str
       }
       case 'RawResult':
         v = v.raw

@@ -1,4 +1,5 @@
 import type { GoogleEvent } from './google/calendar'
+import type { VkoEntry } from './vko'
 
 export type Obj = Record<string, any>
 
@@ -109,6 +110,7 @@ export type EntityUnion =
   | DiscordTag
   | GooglePlace
   | GoogleEvent
+  | VkoEntry
   | RawResult
   | ListResult
 
@@ -213,4 +215,6 @@ export interface GooglePlace extends Entity {
     }
   }
   Session?: Session
+  /** Manually injected via `getClosestVkoEntry()` */
+  VkoEntry?: VkoEntry
 }

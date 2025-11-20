@@ -1,8 +1,8 @@
 import fetch from 'node-fetch'
 import qs from 'query-string'
-import { addType } from '../format.js'
 import type { GooglePlace } from '../types.js'
 import { assertToken } from './auth.js'
+import { addType } from '../utils.js'
 
 export const TYPE = 'GooglePlace'
 const DEFAULT_LOCATION = '59.343,18.05'

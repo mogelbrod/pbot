@@ -2,7 +2,7 @@ import fetch from 'node-fetch'
 import qs from 'query-string'
 import type { Entity } from '../types'
 import { assertToken } from './auth'
-import { addType } from '../format'
+import { addType } from '../utils'
 
 export async function fetchCalendarEvents({
   calendarId,

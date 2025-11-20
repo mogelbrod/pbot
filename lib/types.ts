@@ -198,5 +198,11 @@ export interface GooglePlace extends Entity {
   vicinity?: string
   rating?: number
   price_level?: number
+  geometry?: {
+    location?: {
+      lat: number
+      lng: number
+    }
+  }
   Session?: Session
 }

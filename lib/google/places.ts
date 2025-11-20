@@ -10,18 +10,12 @@ const DEFAULT_LOCATION = '59.343,18.05'
 /**
  * Returns 0 or more places given a query, location & radius.
  *
- * Will return the best candidate, or null, by default.
- * Use `returnFirst = false` to return all candidates instead.
- *
  * @param query - Name/address of place to retrieve
  * @param o - Options
  * @param o.googlePlacesKey - Places API key
- * @param o.returnFirst - Use false to return all candidates
- *        instead of only the first
  * @param o.location - Latitude and longitude to search from
  * @param o.radius - Search radius in meters
- * @return Promise resolving to best candidate if returnFirst=true,
- *         otherwise an array with candidates
+ * @return Promise resolving to array with candidates
  */
 export async function findPlaces(
   query: string,
@@ -43,11 +37,14 @@ export async function findPlaces(
       key: googlePlacesKey,
       input: query,
       inputtype: 'textquery',
-      locationsbias: 'circle:5000@59.332241,18.064516',
-      fields: 'place_id,name,formatted_address',
+      locationsbias: 'circle:5000@' + DEFAULT_LOCATION,
+      fields: 'place_id,name,formatted_address,geometry/location',
     })
   const res = await fetch(url)
-  const json: any = await res.json()
+  const json = (await res.json()) as {
+    candidates: GooglePlace[]
+    status: string
+  }
   if (json.status !== 'OK' && json.status !== 'ZERO_RESULTS') {
     throw Object.assign(new Error(`findPlace: Got status ${json.status}`), {
       inputData: { location, radius },
@@ -94,7 +91,7 @@ export function searchPlaces(
     pageToken?: string
     targetCount?: number
   },
-): Promise<any[]> {
+): Promise<GooglePlace[]> {
   const {
     googlePlacesKey,
     nearby = false,
@@ -139,38 +136,45 @@ export function searchPlaces(
   return (
     fetch(url)
       // TODO: Handle status (= 'INVALID_REQUEST' => retry after 1s)
-      .then((res) => res.json())
-      .then((json: any) => {
-        // Requested page has not yet been generated
-        if (json.status === 'INVALID_REQUEST' && pageToken) {
-          // Retry after waiting for a bit
-          return new Promise((resolve) => setTimeout(resolve, 500)).then(() =>
-            searchPlaces(query, options),
-          )
-        }
+      .then((res) => res.json() as any)
+      .then(
+        (json: {
+          status: string
+          results: GooglePlace[]
+          next_page_token?: string
+        }) => {
+          // Requested page has not yet been generated
+          if (json.status === 'INVALID_REQUEST' && pageToken) {
+            // Retry after waiting for a bit
+            return new Promise((resolve) => setTimeout(resolve, 500)).then(() =>
+              searchPlaces(query, options),
+            )
+          }
 
-        // Error handling
-        if (json.status !== 'OK' && json.status !== 'ZERO_RESULTS') {
-          throw Object.assign(
-            new Error(`searchPlaces: Got status ${json.status}`),
-            { inputData: params },
-          )
-        }
+          // Error handling
+          if (json.status !== 'OK' && json.status !== 'ZERO_RESULTS') {
+            throw Object.assign(
+              new Error(`searchPlaces: Got status ${json.status}`),
+              { inputData: params },
+            )
+          }
 
-        // Determine if we need to fetch additional page(s)
-        const resultsCount = (json && json.results && json.results.length) || 0
-        const remainingCount = targetCount - resultsCount
-        if (remainingCount <= 0 || !json.next_page_token) {
-          return addType(json.results, TYPE) // no more pages to fetch
-        }
+          // Determine if we need to fetch additional page(s)
+          const resultsCount =
+            (json && json.results && json.results.length) || 0
+          const remainingCount = targetCount - resultsCount
+          if (remainingCount <= 0 || !json.next_page_token) {
+            return addType(json.results, TYPE) // no more pages to fetch
+          }
 
-        // Recursively fetch next page(s)
-        const nextOptions = Object.assign({}, options)
-        nextOptions.targetCount = remainingCount
-        nextOptions.pageToken = json.next_page_token
-        return searchPlaces(query, nextOptions).then((nextResults) => {
-          return json.results.concat(nextResults)
-        })
-      })
+          // Recursively fetch next page(s)
+          const nextOptions = Object.assign({}, options)
+          nextOptions.targetCount = remainingCount
+          nextOptions.pageToken = json.next_page_token
+          return searchPlaces(query, nextOptions).then((nextResults) => {
+            return json.results.concat(nextResults)
+          })
+        },
+      )
   )
 }

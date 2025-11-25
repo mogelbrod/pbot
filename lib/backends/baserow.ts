@@ -139,6 +139,10 @@ export function baserowBackend(config: Config): Backend {
 
       const tableId = await getTableId(name)
 
+      if (cacheable && inflight[name]) {
+        return inflight[name] as any
+      }
+
       if (cacheable && useCache && cache[name]) {
         return Promise.resolve(cache[name])
       }
@@ -205,8 +209,14 @@ export function baserowBackend(config: Config): Backend {
 
         if (items.length > maxRecords) {
           items.length = maxRecords
+        } else if (cacheable) {
+          cache[name] = items
         }
         resolve(items)
+      }).finally(() => {
+        if (inflight[name] === promise) {
+          delete inflight[name]
+        }
       })
 
       if (cacheable) {

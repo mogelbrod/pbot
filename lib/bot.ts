@@ -13,6 +13,10 @@ import type { CommandContext } from './commands.js'
 import type { Output } from './types.js'
 import { fetchCalendarEvents, type GoogleEvent } from './google/calendar.js'
 
+/**
+ * Start the Discord bot.
+ * Returns a helper to send a message to a channel.
+ */
 export function startBot(cfg: {
   token: string
   defaultChannel?: string
@@ -284,9 +288,7 @@ export function startBot(cfg: {
   return message
 }
 
-/**
- * Converts a Google Calendar event to Discord scheduled event parameters
- */
+/** Converts a Google Calendar event to Discord scheduled event parameters. */
 function googleEventToDiscordEvent(g: GoogleEvent) {
   const startTime = new Date(g.start.dateTime || g.start.date)
   const endTime =

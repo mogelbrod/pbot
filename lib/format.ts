@@ -5,15 +5,18 @@ import { enumValue } from './backend'
 
 let isFancy = true
 
+/** Enable or disable fancy formatting. */
 export function setFancy(enable: boolean): boolean {
   isFancy = enable
   return enable
 }
 
+/** Returns `true` when fancy formatting is disabled. */
 export function basic(): boolean {
   return !isFancy
 }
 
+/** Escape Markdown when fancy mode is enabled; passthrough otherwise. */
 export function escape(v: string): string {
   return basic() ? v : escapeMarkdown(v)
 }
@@ -21,22 +24,26 @@ export function unescape(v: string): string {
   return v // TODO: Implement unescape?
 }
 
+/** Capitalize first letter and lower-case the rest. */
 export function capitalize(v: string): string {
   return v[0].toUpperCase() + v.substr(1).toLowerCase()
 }
 
+/** Convert value to a log-friendly string. */
 export function stringify(v: any): string {
   if (typeof v === 'string') return v
   if (v instanceof Error) return v.stack || v.message
   return JSON.stringify(v, null, 2)
 }
 
+/** Type guard that checks for an entity-like object carrying `_type`. */
 export function isEntity(v: unknown): v is EntityUnion {
   return (
     !!v && typeof v === 'object' && '_type' in v && typeof v._type === 'string'
   )
 }
 
+/** Render a value into a output-friendly string, respecting fancy/basic modes. */
 export function fancy(v: unknown, depth = 0): string {
   const joiner = depth > 0 ? ' ' : '\n'
   if (isEntity(v)) {
@@ -126,6 +133,10 @@ export function fancy(v: unknown, depth = 0): string {
   return wrap('`', str)
 }
 
+/**
+ * Wrap `parts` in a delimiter while escaping occurrences inside the content.
+ * No wrapping in basic mode.
+ */
 export function wrap(delimeter: string, ...parts: string[]): string {
   if (typeof delimeter !== 'string') {
     throw new TypeError(
@@ -141,10 +152,14 @@ export function wrap(delimeter: string, ...parts: string[]): string {
   return delimeter + str + delimeter
 }
 
+/** Format text in bold. */
 export const bold = wrap.bind(null, '**')
+/** Format text in italics. */
 export const italic = wrap.bind(null, '*')
+/** Format text as code. */
 export const code = wrap.bind(null, '`')
 
+/** Create a list of items. */
 export function list(items: Output[]): ListResult {
   return {
     _type: 'ListResult',
@@ -152,6 +167,7 @@ export function list(items: Output[]): ListResult {
   }
 }
 
+/** Convert numbers to fixed decimals, or return a fallback. */
 export function toFixed(
   number: number | undefined | null,
   decimals = 1,
@@ -160,6 +176,7 @@ export function toFixed(
   return typeof number === 'number' ? number.toFixed(decimals) : fallback
 }
 
+/** Format a log line with timestamp and stringified args. */
 export function log(...args: any[]): string {
   return [
     '[',
@@ -169,6 +186,7 @@ export function log(...args: any[]): string {
   ].join('')
 }
 
+/** Split a command string into tokens, honoring quotes and backslash escapes. */
 export function tokenize(str: string): string[] {
   const tokens = []
   let currentToken = ''
@@ -213,6 +231,7 @@ export function tokenize(str: string): string[] {
   return tokens
 }
 
+/** Format a date with optional time component. */
 export function date(
   date: string | number | Date,
   includeTime = false,
@@ -247,15 +266,18 @@ export function date(
   // )
 }
 
+/** Linkify text to URL in fancy mode; passthrough in basic mode. */
 export function linkify(text: string, url?: string | null): string {
   url = url ? escape(url) : luckyURL(text)
   return basic() ? text : `[${text}](<${escape(url)}>)`
 }
 
+/** Return raw Discord tag (hidden in basic mode). */
 export function discordTag(value: string): string {
   return basic() ? '' : value
 }
 
+/** Create a `DiscordTag` entity wrapper. */
 export function DiscordTag(value: string) {
   return {
     _type: 'DiscordTag',
@@ -263,10 +285,12 @@ export function DiscordTag(value: string) {
   }
 }
 
+/** Build a Google "I'm Feeling Lucky" URL for a query. */
 export function luckyURL(query: string): string {
   return `http://www.google.com/search?q=${encodeURIComponent(query)}&btnI`
 }
 
+/** Build a Google Maps search URL for a place or placeId. */
 export function placeURL(
   query: string,
   placeId?: string | null,
@@ -282,6 +306,7 @@ export function placeURL(
   return 'https://www.google.com/maps/search/?' + queryString
 }
 
+// TODO: Move these to a dedicated `Types` backend table that gets fetched on startup (and when the 'reload' command is used).
 const DRINK_TYPES = {
   Beer: {
     emoji: '🍺',
@@ -305,6 +330,7 @@ const DRINK_TYPES = {
   },
 }
 
+/** Return drink rendering metadata (emoji, multiplier) by type. */
 export function drinkType(drink: string | { Type: NestedEnum }) {
   if (typeof drink === 'object') {
     drink = enumValue(drink.Type)
@@ -312,6 +338,7 @@ export function drinkType(drink: string | { Type: NestedEnum }) {
   return (DRINK_TYPES as Record<string, any>)[drink] || DRINK_TYPES.Unknown
 }
 
+/** Escape special RegExp characters in a string. */
 export function escapeRegExp(str: string): string {
   return str.replace(/([.*+?^=!:${}()|[\]/\\])/g, '\\$1')
 }

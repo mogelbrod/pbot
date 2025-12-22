@@ -18,6 +18,7 @@ import { isAdmin, enumValue, placeToSession } from './backend.js'
 import { isPresent, type OmitUnderscored } from './utils.js'
 import { getClosestVkoEntry, getVkoEntries } from './vko.js'
 
+/** Execution context bound for command handlers. */
 export interface CommandContext {
   config: Config
   backend: Backend
@@ -31,16 +32,18 @@ export interface CommandContext {
   }
 }
 
+/** ES5-style command function signature bound via `this: CommandContext`. */
 export type CommandFn = (
   this: CommandContext,
   ...args: string[]
 ) => Output | Promise<Output>
 
+/** Registered commands mapping name to description and implementation. */
 export const commands: Record<string, { description: string; fn: CommandFn }> =
   {}
 
 /**
- * Parse and execute the given input.
+ * Parse and execute the given input string against registered commands.
  *
  * @param input - Raw input string or tokens array.
  * @return Execution result
@@ -89,6 +92,7 @@ export function execute(
   })
 }
 
+/** Infer a string of argument names from a command's function source. */
 export function functionToArgsString(command: string, leadingSpace = true) {
   const definition = commands[command]
   if (!definition) {

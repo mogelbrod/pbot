@@ -4,7 +4,10 @@ import type { GooglePlace } from '../types.js'
 import { assertToken } from './auth.js'
 import { addType } from '../utils.js'
 
+/** Entity type label for Google Places results. */
 export const TYPE = 'GooglePlace'
+
+// TODO: Make location configurable in config.json
 const DEFAULT_LOCATION = '59.343,18.05'
 
 /**

@@ -11,6 +11,7 @@ import {
 } from '../types.js'
 import { omitUnderscored } from '../utils.js'
 
+/** Create a Baserow-backed backend. */
 export function baserowBackend(config: Config): Backend {
   const cfg: Exclude<Config['baserow'], undefined> = config.baserow!
 
@@ -95,10 +96,6 @@ export function baserowBackend(config: Config): Backend {
   }
 
   const self: Backend = {
-    get tableNames() {
-      return TABLES
-    },
-
     parseRecord(record) {
       if (!record || typeof record !== 'object') {
         return record
@@ -162,7 +159,7 @@ export function baserowBackend(config: Config): Backend {
             'Unsupported filterByFormula format: ' + args.filterByFormula,
           )
         }
-        const operation = self.tableNames.includes(parts[1] as any)
+        const operation = TABLES.includes(parts[1] as any)
           ? 'link_row_has'
           : 'equal'
         params.set(`filter__${parts[1].trim()}__${operation}`, parts[2].trim())

@@ -7,11 +7,16 @@ import {
   type TableName,
 } from './types'
 
+/** Default tables to reload when refreshing cache without explicit selection. */
 export const RELOADED_TABLES = [
   'Members',
   'Sessions',
 ] as const satisfies EntityType[]
 
+/**
+ * Default list/select arguments for known tables across backends.
+ * Backends may use these as sensible defaults for field inclusion/exclusion and sorting.
+ */
 export const LIST_ARGS = {
   Members: {
     sort: [{ field: 'Name' }],
@@ -26,6 +31,12 @@ export const LIST_ARGS = {
   Drinks: { sort: [{ field: 'Time' }] },
 } as const
 
+/**
+ * Normalize a string to a valid `TableName`.
+ * Ensures correct capitalization and pluralization.
+ * @param str - Arbitrary table name candidate
+ * @returns Normalized `TableName`
+ */
 export function tableName(str: string): TableName {
   return str.replace(/^(.)(.+?)s?$/, (_, c, rest) => {
     let name = c.toUpperCase() + rest.toLowerCase()
@@ -36,6 +47,11 @@ export function tableName(str: string): TableName {
   }) as TableName
 }
 
+/**
+ * Determine whether a member has an administrative role.
+ * @param member - Member entity
+ * @returns `true` if role is one of admin-like values
+ */
 export function isAdmin(member: Member): boolean {
   return (
     member &&
@@ -45,6 +61,12 @@ export function isAdmin(member: Member): boolean {
   )
 }
 
+/**
+ * Copy relevant fields from a `GooglePlace` into a session-like object.
+ * @param place - Place result (may be null/undefined)
+ * @param session - Mutable session shape to enrich
+ * @returns The same `session` reference for chaining
+ */
 export function placeToSession<
   S extends { GooglePlaceID?: string; Address?: string },
 >(place: GooglePlace | null | undefined, session: S): S {
@@ -55,6 +77,11 @@ export function placeToSession<
   return session
 }
 
+/**
+ * Resolve a backend-specific enum representation to its string value or id.
+ * @param nested - Enum value (string or `{ value, _id }` object)
+ * @param returnId - When `true`, returns `_id` if present
+ */
 export function enumValue(nested: NestedEnum, returnId = false): string {
   return typeof nested === 'string'
     ? nested

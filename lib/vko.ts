@@ -5,7 +5,7 @@ import type { Entity } from './types'
 let cachedVkoEntries: Promise<VkoEntries> | undefined
 let cachedTimestamp = 0
 
-/** Returns VKO data table, fetching it from source if cache is older than `maxAge` */
+/** Returns VKO data table, fetching from source if cache is older than `maxAge`. */
 export function getVkoEntries(maxAge = 3600e3): Promise<VkoEntries> {
   if (!cachedVkoEntries || Date.now() - cachedTimestamp > maxAge) {
     cachedVkoEntries = fetchVkoEntries()
@@ -13,7 +13,7 @@ export function getVkoEntries(maxAge = 3600e3): Promise<VkoEntries> {
   return cachedVkoEntries
 }
 
-/** Fetch VKO data from source and process into a table */
+/** Fetch VKO data from source and process into a table. */
 export async function fetchVkoEntries(): Promise<VkoEntries> {
   cachedTimestamp = Date.now()
 
@@ -79,7 +79,7 @@ export async function fetchVkoEntries(): Promise<VkoEntries> {
   return entries
 }
 
-/** Returns closest VKO entry for the given coordinates */
+/** Returns closest VKO entry for the given coordinates. */
 export async function getClosestVkoEntry(
   lat: number,
   lng: number,
@@ -130,8 +130,10 @@ function toSlug(str: string): string {
     .replace(/[\s_]+/g, '-') // "Nivå 22 (33cl)" → "niva-22-33cl";
 }
 
+/** VKO entries table keyed by `barId`. */
 export type VkoEntries = Record<string, VkoEntry>
 
+/** VKO entry describing a bar's pricing and optional happy hour. */
 export interface VkoEntry extends Entity {
   _type: 'VkoEntry'
   barId: string

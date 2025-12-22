@@ -10,6 +10,7 @@ import {
 import { omitUnderscored } from '../utils.js'
 import { LIST_ARGS, RELOADED_TABLES, tableName } from '../backend.js'
 
+/** Create an Airtable-backed backend. */
 export function airtableBackend(config: Config): Backend {
   if (!config.airtable?.base || !config.airtable.token) {
     throw new Error(`{ token, base } are required in config.airtable`)
@@ -23,10 +24,6 @@ export function airtableBackend(config: Config): Backend {
   const log = config.log || (() => {})
 
   const self: Backend = {
-    get tableNames() {
-      return TABLES
-    },
-
     parseRecord(record) {
       return typeof record === 'object'
         ? Object.assign(
@@ -46,7 +43,7 @@ export function airtableBackend(config: Config): Backend {
       const cacheable = !args
       name = tableName(name) as typeof name
       args ||= LIST_ARGS[name as keyof typeof LIST_ARGS] as any
-      if (!name || self.tableNames.indexOf(name) < 0) {
+      if (!name || TABLES.indexOf(name) < 0) {
         throw new Error(`Unknown table '${name}'`)
       }
 

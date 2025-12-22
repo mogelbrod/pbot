@@ -4,6 +4,7 @@ import type { Entity } from '../types'
 import { assertToken } from './auth'
 import { addType } from '../utils'
 
+/** Fetch calendar events from Google Calendar API within a time range. */
 export async function fetchCalendarEvents({
   calendarId,
   token,

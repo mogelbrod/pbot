@@ -1,5 +1,11 @@
 import type { EntityType, EntityForTable, Obj } from './types'
 
+/**
+ * Mutably stamps an entity or array of entities with the provided `_type`.
+ * @param objectOrArray - Object or array to annotate
+ * @param type - Discriminant to assign to `_type`
+ * @returns The same object/array typed as the target entity variant
+ */
 export function addType<T extends Obj | Obj[], Type extends EntityType>(
   objectOrArray: T,
   type: Type,
@@ -13,13 +19,10 @@ export function addType<T extends Obj | Obj[], Type extends EntityType>(
 }
 
 /**
- * Filter function for objects like array.filter().
- * Returns a copy of the original object that only includes properties that the
- * predicate returned a truthy value for.
- *
- * @param obj - Object to filter
- * @param predicate - Filter function called with `(key, value)`
- * @return Filtered copy of original object
+ * Filter an object's properties into a new object based on a predicate.
+ * @param obj - Source object
+ * @param predicate - Called with `(key, value)`; return truthy to include
+ * @returns New object with selected properties
  */
 export function filter<Obj extends Record<string, any>>(
   obj: Obj,
@@ -34,17 +37,10 @@ export function filter<Obj extends Record<string, any>>(
 }
 
 /**
- * Type guard that filters out `null`, `undefined`, and empty strings.
- * Can be used with `Array.prototype.filter`.
- *
+ * Type guard that removes `null`, `undefined` and empty strings.
  * @example
- * ```ts
- * const arr = ['a', 'b', '', null, undefined]
- * const filtered = arr.filter(isPresent) // -> ['a', 'b']
- * ```
- *
- * @param value - The value to check.
- * @returns `true` if the value is not `null`, `undefined`, or `''`.
+ * const arr = ['a', 'b', '', null, undefined].filter(isPresent)
+ * // -> ['a', 'b']
  */
 export function isPresent<T>(
   value: T,
@@ -53,10 +49,10 @@ export function isPresent<T>(
 }
 
 /**
- * Omits properties whose key begin with an underscore, aka private properties.
- *
- * @param obj - Object to filter
- * @return Copy of obj
+ * Create a shallow copy omitting properties whose keys start with `_`.
+ * Commonly used to strip backend/private fields before writes.
+ * @param obj - Source object
+ * @returns Copy without underscored keys
  */
 export function omitUnderscored<T extends Record<string, any>>(
   obj: T,
@@ -67,10 +63,12 @@ export function omitUnderscored<T extends Record<string, any>>(
   >
 }
 
+/** Utility type that removes underscored keys from `T`. */
 export type OmitUnderscored<T extends Record<string, any>> = Omit<
   T,
   UnderscoredKeys<T>
 >
+/** Helper type yielding keys of `U` that start with `_`. */
 export type UnderscoredKeys<U> = {
   [K in keyof U]: K extends string
     ? K extends `_${string}`

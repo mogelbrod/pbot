@@ -17,6 +17,10 @@
        "token": "a.b.c",
        "defaultChannel": "DISCORD_CHANNEL_ID",
      },
+     "location": {
+       "coords": "59,18", // Lat/long coordinate bias for google places lookups
+       "radius": 5000,
+     },
      "google": {
        "placesKey": "GOOGLE_PLACES_KEY",
        "calendarId": "a18pp1o4bqjttupjmpl0uuped4@group.calendar.google.com",

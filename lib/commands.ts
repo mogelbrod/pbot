@@ -196,6 +196,8 @@ command('start', 'Begins a new session', async function (location = 'Unknown') {
   }
   return findPlaces(location, {
     googlePlacesKey: this.config.google!.placesKey!,
+    location: this.config.location!.coords,
+    radius: this.config.location!.radius,
   })
     .catch((error) => {
       this.output(error)
@@ -335,7 +337,10 @@ command(
     query = query.trim()
     const resultsInt =
       isInt(results) && results > 0 && results < 100 ? results : 20
-    const radiusInt = isInt(radius) && radius > 0 ? radius : 5000
+    const radiusInt =
+      isInt(radius) && radius > 0
+        ? radius
+        : this.config.location?.radius || 5000
     let [minPrice, maxPrice] = price.split('-')
     if (!isInt(maxPrice)) {
       maxPrice = isInt(minPrice) && minPrice > 0 ? minPrice : '4'
@@ -347,11 +352,12 @@ command(
       this.backend.table('Sessions'),
       searchPlaces(query, {
         googlePlacesKey: this.config.google!.placesKey!,
+        location: this.config.location!.coords,
+        radius: radiusInt,
         targetCount: resultsInt,
         minPrice: +minPrice,
         maxPrice: +maxPrice,
         openNow: isOpenNow,
-        radius: radiusInt,
       }),
       getVkoEntries(),
     ])
@@ -400,6 +406,8 @@ command(
       this.backend.table('Sessions'),
       findPlaces(query, {
         googlePlacesKey: this.config.google?.placesKey as string,
+        location: this.config.location!.coords,
+        radius: this.config.location!.radius,
       }),
       getVkoEntries(),
     ])
@@ -492,7 +500,11 @@ command('maintenance', 'Runs various maintenance tasks', async function () {
       // Only lookup place if not yet mapped
       const placesPromise = session.GooglePlaceID
         ? Promise.resolve()
-        : findPlaces(query, { googlePlacesKey: token })
+        : findPlaces(query, {
+            googlePlacesKey: token,
+            location: this.config.location!.coords,
+            radius: this.config.location!.radius,
+          })
 
       return placesPromise.then((places) => {
         if (places?.[0]) {

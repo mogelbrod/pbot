@@ -7,9 +7,6 @@ import { addType } from '../utils.js'
 /** Entity type label for Google Places results. */
 export const TYPE = 'GooglePlace'
 
-// TODO: Make location configurable in config.json
-const DEFAULT_LOCATION = '59.343,18.05'
-
 /**
  * Returns 0 or more places given a query, location & radius.
  *
@@ -24,11 +21,11 @@ export async function findPlaces(
   query: string,
   {
     googlePlacesKey,
-    location = DEFAULT_LOCATION,
+    location,
     radius = 5000,
   }: {
     googlePlacesKey: string
-    location?: string
+    location: string
     radius?: number
   },
 ): Promise<GooglePlace[]> {
@@ -40,7 +37,7 @@ export async function findPlaces(
       key: googlePlacesKey,
       input: query,
       inputtype: 'textquery',
-      locationsbias: 'circle:5000@' + DEFAULT_LOCATION,
+      locationsbias: `circle:${radius}@${location}`,
       fields: 'place_id,name,formatted_address,geometry/location',
     })
   const res = await fetch(url)
@@ -83,9 +80,9 @@ export function searchPlaces(
   query: string,
   options: {
     googlePlacesKey: string
-    nearby?: boolean
+    location: string
     radius?: number
-    location?: string
+    nearby?: boolean
     minPrice?: number
     maxPrice?: number
     type?: string
@@ -97,9 +94,9 @@ export function searchPlaces(
 ): Promise<GooglePlace[]> {
   const {
     googlePlacesKey,
-    nearby = false,
+    location,
     radius = 5000,
-    location = DEFAULT_LOCATION,
+    nearby = false,
     minPrice = 0,
     maxPrice = 4,
     type = undefined,

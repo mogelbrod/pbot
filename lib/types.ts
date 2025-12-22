@@ -28,6 +28,12 @@ export interface Config {
     /** Discord default channel ID */
     defaultChannel: string
   }
+  location?: {
+    /** Default coordinates for location-based searches (lat,long) */
+    coords: string
+    /** Default search radius in meters */
+    radius: number
+  }
   google?: {
     /** Google Places private key */
     placesKey?: string

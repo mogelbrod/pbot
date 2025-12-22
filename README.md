@@ -35,3 +35,14 @@
    npm run cli start "Imaginary Pub"
    npm run cli . drink 40 Beer user
    ```
+
+## Overview
+
+### Backend tables
+
+- `Members`: membership records keyed by `Email`. Includes `Role` (inactive, prospect, member, board, etc.), `Name`, `Joined` date, amongst others.
+- `Sessions`: PB sessions. Includes `Start` time, `Location` identifier, `Address`, etc.
+- `Drinks`: Records for individual drinks consumed by a member (`Members` prop) during a session (`Sessions` prop). Includes `Time` drink was finished, `Type` and `Volume` of drink.
+- `DrinkTypes`: Defines drink types for consumption (`Type` in `Drinks` table). Includes `Name`, `Emoji` for visual presentation, and `Multiplier` to calculate beer equivalent `Volume` in `Drinks` table.
+- `Feedback`: Feedback and suggestions from members for PB and pbot in particular. Includes `Time`, `Author` (`Members` reference), and `Feedback` text.
+- `Quotes`: Notable quotes by PB members. Includes `Time`, `Author` (`Members` reference), and `Quote` text.

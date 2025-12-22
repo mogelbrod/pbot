@@ -118,6 +118,7 @@ export interface User {
 export type Output =
   | string
   | number
+  | boolean
   | Date
   | Member
   | EntityUnion
@@ -194,6 +195,7 @@ export interface RawResult extends Entity {
 export interface ListResult extends Entity {
   _type: 'ListResult'
   items: Output[]
+  numbered?: boolean
 }
 
 /**

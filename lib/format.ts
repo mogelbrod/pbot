@@ -110,8 +110,20 @@ export function fancy(v: unknown, depth = 0): string {
       case 'RawResult':
         v = v.raw
         break
-      case 'ListResult':
-        return v.items.map((x) => '- ' + fancy(x, depth + 1)).join('\n')
+      case 'ListResult': {
+        const list = v
+        return v.items
+          .map((x, index) => {
+            const prefix =
+              ' '.repeat((depth - 1) * 2) +
+              (list.numbered ? `${index + 1}. ` : '- ')
+            return isEntity(x) &&
+              (x._type === 'ListResult' || x._type === 'RawResult')
+              ? fancy(x, depth + 1)
+              : prefix + fancy(x, depth + 1)
+          })
+          .join('\n')
+      }
     }
   } else {
     switch ({}.toString.call(v).slice(8, -1)) {
@@ -141,7 +153,10 @@ export function fancy(v: unknown, depth = 0): string {
  * Wrap `parts` in a delimiter while escaping occurrences inside the content.
  * No wrapping in basic mode.
  */
-export function wrap(delimeter: string, ...parts: string[]): string {
+export function wrap(
+  delimeter: string,
+  ...parts: Array<string | number>
+): string {
   if (typeof delimeter !== 'string') {
     throw new TypeError(
       `wrap: Delimeter must be a string, got '${delimeter as any}'`,
@@ -164,10 +179,11 @@ export const italic = wrap.bind(null, '*')
 export const code = wrap.bind(null, '`')
 
 /** Create a list of items. */
-export function list(items: Output[]): ListResult {
+export function list(items: Output[], numbered = false): ListResult {
   return {
     _type: 'ListResult',
     items,
+    numbered,
   }
 }
 

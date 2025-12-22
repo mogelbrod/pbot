@@ -135,7 +135,13 @@ export interface TableEntity extends Entity {
 }
 
 /** Union of all table-backed entities. */
-export type TableEntityUnion = Drink | Member | Session | Feedback | Quote
+export type TableEntityUnion =
+  | Drink
+  | DrinkType
+  | Member
+  | Session
+  | Feedback
+  | Quote
 
 /** Union of all entities that can be formatted/rendered by the bot. */
 export type EntityUnion =
@@ -155,6 +161,7 @@ export const TABLES = [
   'Members',
   'Sessions',
   'Drinks',
+  'DrinkTypes',
   'Feedback',
   'Quotes',
 ] as const satisfies EntityType[]
@@ -207,6 +214,14 @@ export interface Drink extends TableEntity {
   'Aggregated Volume'?: string
   Sessions: NestedEnum[]
   Members: NestedEnum[]
+}
+
+/** Drink type record. */
+export interface DrinkType extends TableEntity {
+  _type: 'DrinkTypes'
+  Name: string
+  Emoji: string
+  Multiplier: number
 }
 
 /** Member record with identifiers and relational links. */

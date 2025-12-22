@@ -31,20 +31,33 @@ export const LIST_ARGS = {
   Drinks: { sort: [{ field: 'Time' }] },
 } as const
 
+/** Lower-cased aliases for {@link TABLES} used by {@link tableName}. */
+const TABLE_ALIASES = TABLES.reduce(
+  (obj, name) => {
+    const lower = name.toLowerCase()
+    obj[lower] = name
+    obj[lower + 's'] = name
+    obj[lower.replace(/s$/, '')] = name
+    return obj
+  },
+  // Pre-defined aliases
+  {
+    types: 'DrinkTypes',
+    users: 'Members',
+  } as Record<string, TableName>,
+)
+
 /**
  * Normalize a string to a valid `TableName`.
- * Ensures correct capitalization and pluralization.
  * @param str - Arbitrary table name candidate
  * @returns Normalized `TableName`
  */
 export function tableName(str: string): TableName {
-  return str.replace(/^(.)(.+?)s?$/, (_, c, rest) => {
-    let name = c.toUpperCase() + rest.toLowerCase()
-    if (TABLES.indexOf(name) < 0) {
-      name += 's'
-    }
-    return name
-  }) as TableName
+  const name = TABLE_ALIASES[str.toLowerCase()]
+  if (!name) {
+    throw new Error(`Unknown table name: ${str}`)
+  }
+  return name
 }
 
 /**

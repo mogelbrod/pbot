@@ -76,12 +76,9 @@ export function baserowBackend(config: Config): Backend {
     >(`/database/tables/all-tables/`)
     tableIds = {}
     for (const t of tables) {
-      tableIds[t.name] = Number(t.id)
-      // const nameLower = String(t.name).toLowerCase()
-      // const tableId = Number(t.id)
-      // tableIds[nameLower] = tableId
-      // tableIds[nameLower + 's'] = tableId
-      // tableIds[nameLower.replace(/s$/, '')] = tableId
+      const tableId = Number(t.id)
+      tableIds[t.name] = tableId
+      tableIds[tableName(t.name)] = tableId
     }
     return tableIds
   }

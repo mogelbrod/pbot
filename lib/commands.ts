@@ -17,6 +17,7 @@ import type { GuildMember } from 'discord.js'
 import { isAdmin, enumValue, placeToSession } from './backend.js'
 import { isPresent, type OmitUnderscored } from './utils.js'
 import { getClosestVkoEntry, getVkoEntries } from './vko.js'
+import { drinkType, loadDrinkTypes } from './drink-types.js'
 
 /** Execution context bound for command handlers. */
 export interface CommandContext {
@@ -182,10 +183,12 @@ command('members', 'Lists all members', async function () {
   return f.list(members)
 })
 
-command('reload', 'Reloads all tables', function (...tables) {
-  return this.backend
-    .tables(false, ...(tables as TableName[]))
-    .then(() => `Reloaded tables ${tables.join(', ')}`)
+command('reload', 'Reloads data', async function (...tables) {
+  await Promise.all([
+    this.backend.tables(false, ...(tables as TableName[])),
+    loadDrinkTypes(this.backend),
+  ])
+  return `Reloaded tables ${tables.join(', ')}`
 })
 
 command('start', 'Begins a new session', async function (location = 'Unknown') {
@@ -317,6 +320,11 @@ command(
     ]
   },
 )
+
+command('types', 'List available drink types', async function () {
+  const drinkTypes = await loadDrinkTypes(this.backend)
+  return f.list(Object.values(drinkTypes))
+})
 
 command('sum', 'Alias of list', function (what = '-1') {
   // eslint-disable-next-line prefer-rest-params
@@ -648,7 +656,7 @@ command('list', 'Lists drinks for a session/user', function (what = '-1') {
               memo[key].Entity = groupingItems.find((it) => key === it._id)
             }
             memo[key].push(drink)
-            memo[key].Value += drink.Volume * f.drinkType(drink).multiplier
+            memo[key].Value += drink.Volume * drinkType(drink).Multiplier
             return memo
           },
           {} as Record<

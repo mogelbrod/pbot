@@ -6,6 +6,7 @@ import { execute, type CommandContext } from './lib/commands.js'
 import * as format from './lib/format.js'
 import type { Config } from './lib/types.js'
 import { createGoogleAuth } from './lib/google/auth.js'
+import { loadDrinkTypes } from './lib/drink-types.js'
 
 const args = process.argv.slice(2)
 
@@ -107,6 +108,11 @@ void import(configPath, { with: { type: 'json' } }).then(
         return console.log(format.fancy(res))
       },
     }
+
+    // Load drink types from backend
+    void loadDrinkTypes(backend).then(() => {
+      log('Loaded drink types')
+    })
 
     // Configure Google auth if service account is provided
     const googleSA = config.google?.serviceAccount

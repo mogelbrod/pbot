@@ -1,7 +1,8 @@
 import { time, TimestampStyles, escapeMarkdown } from 'discord.js'
 import qs from 'query-string'
-import type { EntityUnion, ListResult, NestedEnum, Output } from './types'
+import type { EntityUnion, ListResult, Output } from './types'
 import { enumValue } from './backend'
+import { drinkType } from './drink-types'
 
 let isFancy = true
 
@@ -52,11 +53,14 @@ export function fancy(v: unknown, depth = 0): string {
         return basic() ? '' : v.value
       case 'Drinks': {
         let volume = String(v.Volume)
-        const { emoji } = drinkType(v)
+        const { Emoji } = drinkType(v)
         if (v['Aggregated Volume']) {
-          volume = v['Aggregated Volume'].replace(/\+/g, emoji)
+          volume = v['Aggregated Volume'].replace(/\+/g, Emoji)
         }
-        return volume + emoji
+        return volume + Emoji
+      }
+      case 'DrinkTypes': {
+        return `${v.Emoji} ${v.Name} (×${v.Multiplier})`
       }
       case 'Members':
         return v.Name + (depth < 2 && v.Role ? ` (${enumValue(v.Role)})` : '')
@@ -304,38 +308,6 @@ export function placeURL(
     query_place_id: placeId,
   })
   return 'https://www.google.com/maps/search/?' + queryString
-}
-
-// TODO: Move these to a dedicated `Types` backend table that gets fetched on startup (and when the 'reload' command is used).
-const DRINK_TYPES = {
-  Beer: {
-    emoji: '🍺',
-    multiplier: 1.0,
-  },
-  Wine: {
-    emoji: '🍷',
-    multiplier: 2.0,
-  },
-  Whiskey: {
-    emoji: '🥃',
-    multiplier: 8.0,
-  },
-  Soda: {
-    emoji: '🍼',
-    multiplier: 0,
-  },
-  Unknown: {
-    emoji: '🍼',
-    multiplier: 1.0,
-  },
-}
-
-/** Return drink rendering metadata (emoji, multiplier) by type. */
-export function drinkType(drink: string | { Type: NestedEnum }) {
-  if (typeof drink === 'object') {
-    drink = enumValue(drink.Type)
-  }
-  return (DRINK_TYPES as Record<string, any>)[drink] || DRINK_TYPES.Unknown
 }
 
 /** Escape special RegExp characters in a string. */

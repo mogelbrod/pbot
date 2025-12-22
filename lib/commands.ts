@@ -279,7 +279,7 @@ command(
 
     // Simply create new drink record
     if (!isModifier) {
-      const drink = this.backend.create('Drinks', {
+      const drink = await this.backend.create('Drinks', {
         Time: new Date().toISOString(),
         Sessions: [session._id],
         Members: [memberRecord._id],

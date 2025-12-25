@@ -114,7 +114,7 @@ export function fancy(v: unknown, depth = 0): string {
         return v.items
           .map((x, index) => {
             const prefix =
-              ' '.repeat((depth - 1) * 2) +
+              ' '.repeat(Math.max(depth - 1, 0) * 2) +
               (list.numbered ? `${index + 1}. ` : '- ')
             return isEntity(x) &&
               (x._type === 'ListResult' || x._type === 'RawResult')

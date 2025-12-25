@@ -3,7 +3,7 @@
     "noEmit": true,
     "moduleDetection": "force",
     "module": "Preserve",
-    "target": "es2024",
+    "target": "es2023",
     "allowJs": true,
     "checkJs": true,
     "strict": true,
@@ -15,13 +15,12 @@
     "experimentalDecorators": true,
     "skipLibCheck": true,
     "lib": [
-      "es2024"
+      "es2023"
     ],
   },
   "include": [
     "*.js",
     "*.ts",
-    ".mocharc.cjs",
     "lib",
   ],
   "exclude": [

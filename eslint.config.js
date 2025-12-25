@@ -107,11 +107,5 @@ export default defineConfig(
       yoda: 2,
     },
   },
-  {
-    files: ['.mocharc.cjs'],
-    languageOptions: {
-      globals: { module: 'readonly' },
-    },
-  },
   eslintConfigPrettier,
 )

@@ -4,7 +4,8 @@ import type { Backend, DrinkType, NestedEnum } from './types'
 export type DrinkTypes = Record<string, DrinkType>
 
 /** Drink types defined through {@link loadDrinkTypes}/{@link defineDrinkTypes}. */
-let drinkTypes: DrinkTypes = defineDrinkTypes({})
+let drinkTypes: DrinkTypes
+defineDrinkTypes({})
 
 /** Return drink type metadata (emoji, multiplier) for the given type name. */
 export function drinkType(drink: string | { Type: NestedEnum }) {
@@ -15,8 +16,8 @@ export function drinkType(drink: string | { Type: NestedEnum }) {
 }
 
 /** Re-define drink types. */
-export function defineDrinkTypes(types: DrinkTypes) {
-  return {
+export function defineDrinkTypes(types: DrinkTypes): DrinkTypes {
+  return (drinkTypes = {
     ...types,
     Unknown: {
       Name: 'Unknown' as const,
@@ -26,7 +27,7 @@ export function defineDrinkTypes(types: DrinkTypes) {
       _created: new Date(),
       _id: 'Unknown',
     },
-  }
+  })
 }
 
 /** Load drink types from the backend. */
@@ -37,6 +38,5 @@ export async function loadDrinkTypes(backend: Backend) {
     obj[type.Name] = type
     return obj
   }, {} as DrinkTypes)
-  drinkTypes = defineDrinkTypes(types)
-  return records
+  return defineDrinkTypes(types)
 }

@@ -15,7 +15,7 @@ import type {
 } from './types.js'
 import type { GuildMember } from 'discord.js'
 import { isAdmin, enumValue, placeToSession } from './backend.js'
-import { isPresent, type OmitUnderscored, parseWindow } from './utils.js'
+import { isPresent, type OmitUnderscored, parseDuration } from './utils.js'
 import { getClosestVkoEntry, getVkoEntries } from './vko.js'
 import { drinkType, loadDrinkTypes } from './drink-types.js'
 
@@ -767,8 +767,8 @@ command(
 command(
   'stats',
   'Shows stats for the given scope (= me/all/specific user) and time period',
-  async function (scope = 'me', window = '1y') {
-    const { start, end, label } = parseWindow(window)
+  async function (scope = 'me', duration = '1y') {
+    const { start, end } = parseDuration(duration)
 
     const [members, sessions, drinks] = await this.backend.tables(
       false,
@@ -831,7 +831,7 @@ command(
       return Math.floor(maxGap / 86400000)
     }
 
-    const rows: Output[] = [f.italic(`${label} — stats`)]
+    const rows: Output[] = [f.italic(`${duration} — stats`)]
 
     const userQuery =
       scope === 'me' ? this.user : scope === 'all' ? null : scope

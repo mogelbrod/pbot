@@ -80,97 +80,43 @@ export type UnderscoredKeys<U> = {
 
 /**
  * Parse a window spec into start/end dates.
- * TODO: Remove or simplify.
+ * Supports ms-parseable formats (e.g., `7d`, `30d`) and
+ * date ranges (`YYYY-MM-DD..YYYY-MM-DD` / `YYYY-MM-DD...YYYY-MM-DD`).
+ * Use `.`/`..` for inclusive end date, or `...` to exclude end date.
  */
-export function parseWindow(spec?: string): {
+export function parseDuration(spec?: string): {
   start: Date
   end: Date
-  label: string
 } {
-  const now = new Date()
-  let start: Date
-  let end: Date
-  let label = ''
+  spec = spec?.trim() ?? ''
 
-  const toStartOfDay = (d: Date) => {
-    const x = new Date(d)
-    x.setHours(0, 0, 0, 0)
-    return x
-  }
-  const toEndExclusive = (d: Date) => {
-    const x = new Date(d)
-    x.setHours(0, 0, 0, 0)
-    x.setDate(x.getDate() + 1)
-    return x
-  }
-
-  if (!spec || !spec.trim()) {
-    const duration = ms('365d') as unknown as number
-    end = now
-    start = new Date(end.getTime() - duration)
-    label = 'Last 365 days'
-    return { start, end, label }
-  }
-
-  spec = spec.trim()
-
-  const yearMatch = spec.match(/^([0-9]{4})$/)
-  if (yearMatch) {
-    const y = parseInt(yearMatch[1], 10)
-    start = new Date(Date.UTC(y, 0, 1))
-    end = new Date(Date.UTC(y + 1, 0, 1))
-    label = String(y)
-    return { start, end, label }
-  }
-
-  const ymMatch = spec.match(/^([0-9]{4})-([0-9]{2})$/)
-  if (ymMatch) {
-    const y = parseInt(ymMatch[1], 10)
-    const m = parseInt(ymMatch[2], 10) - 1
-    start = new Date(Date.UTC(y, m, 1))
-    end = new Date(Date.UTC(y, m + 1, 1))
-    label = `${ymMatch[1]}-${ymMatch[2]}`
-    return { start, end, label }
-  }
-
-  const rangeMatch = spec.match(/^(.+)\.\.(.+)$/)
+  // Try date range format with .. (inclusive) or ... (exclusive)
+  const rangeMatch = spec.match(
+    /^(\d{4})-(\d{2})-(\d{2})(\.{1,3})(\d{4})-(\d{2})-(\d{2})$/,
+  )
   if (rangeMatch) {
-    const [a, b] = [rangeMatch[1], rangeMatch[2]]
-    const parseDay = (s: string): Date | null => {
-      const m = s.match(/^([0-9]{4})-([0-9]{2})-([0-9]{2})$/)
-      if (!m) return null
-      return new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]))
-    }
-    const parseMonth = (s: string): Date | null => {
-      const m = s.match(/^([0-9]{4})-([0-9]{2})$/)
-      if (!m) return null
-      return new Date(Date.UTC(+m[1], +m[2] - 1, 1))
-    }
-    const aDay = parseDay(a) || parseMonth(a)
-    const bDay = parseDay(b) || parseMonth(b)
-    if (aDay && bDay) {
-      start = toStartOfDay(aDay)
-      // If b specified as YYYY-MM, end at next month start; if YYYY-MM-DD, end exclusive next day
-      const bIsMonth = /^[0-9]{4}-[0-9]{2}$/.test(b)
-      end = bIsMonth
-        ? new Date(Date.UTC(bDay.getUTCFullYear(), bDay.getUTCMonth() + 1, 1))
-        : toEndExclusive(bDay)
-      label = `${spec}`
-      return { start, end, label }
-    }
+    const [, y1, m1, d1, sep, y2, m2, d2] = rangeMatch
+    const start = new Date(
+      parseInt(y1, 10),
+      parseInt(m1, 10) - 1,
+      parseInt(d1, 10),
+    )
+    const end = new Date(
+      parseInt(y2, 10),
+      parseInt(m2, 10) - 1,
+      parseInt(d2, 10) + (sep === '...' ? 0 : 1),
+    )
+    end.setMilliseconds(-1) // Set to end of previous day
+    return { start, end }
   }
 
-  const dur = ms(spec as any) as unknown as number
-  if (dur && dur > 0) {
-    end = now
-    start = new Date(end.getTime() - dur)
-    label = `Last ${spec}`
-    return { start, end, label }
+  // Try ms() format, default to 365d if invalid
+  const duration =
+    (ms((spec || '365d') as any) as unknown as number) ||
+    (ms('365d') as unknown as number)
+  const endDate = new Date()
+  return {
+    start: new Date(endDate.getTime() - duration),
+    end: endDate,
   }
-
-  const fallbackDur = ms('365d') as unknown as number
-  end = now
-  start = new Date(end.getTime() - fallbackDur)
-  label = 'Last 365 days'
-  return { start, end, label }
 }

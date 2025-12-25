@@ -1,5 +1,4 @@
 import { time, TimestampStyles, escapeMarkdown } from 'discord.js'
-import qs from 'query-string'
 import type { EntityUnion, ListResult, Output } from './types'
 import { enumValue } from './backend'
 import { drinkType } from './drink-types'
@@ -318,12 +317,12 @@ export function placeURL(
   if (!query && !placeId) {
     return null
   }
-  const queryString = qs.stringify({
-    api: 1,
+  const params = new URLSearchParams({
+    api: '1',
     query,
-    query_place_id: placeId,
+    ...(placeId && { query_place_id: placeId }),
   })
-  return 'https://www.google.com/maps/search/?' + queryString
+  return 'https://www.google.com/maps/search/?' + params.toString()
 }
 
 /** Escape special RegExp characters in a string. */

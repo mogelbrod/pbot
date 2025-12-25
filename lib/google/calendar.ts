@@ -1,5 +1,4 @@
 import fetch from 'node-fetch'
-import qs from 'query-string'
 import type { Entity } from '../types'
 import { assertToken } from './auth'
 import { addType } from '../utils'
@@ -19,15 +18,16 @@ export async function fetchCalendarEvents({
   assertToken(token)
 
   // https://developers.google.com/workspace/calendar/api/v3/reference/events/list
+  const params = new URLSearchParams({
+    timeMin: timeMin.toISOString(),
+    timeMax: timeMax.toISOString(),
+    singleEvents: 'true',
+    orderBy: 'startTime',
+    maxResults: '100',
+  })
   const response = await fetch(
     `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events?` +
-      qs.stringify({
-        timeMin: timeMin.toISOString(),
-        timeMax: timeMax.toISOString(),
-        singleEvents: 'true',
-        orderBy: 'startTime',
-        maxResults: 100,
-      }),
+      params.toString(),
     {
       headers: {
         Authorization: `Bearer ${token}`,

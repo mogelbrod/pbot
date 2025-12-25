@@ -1,5 +1,4 @@
 import fetch from 'node-fetch'
-import qs from 'query-string'
 import type { GooglePlace } from '../types.js'
 import { assertToken } from './auth.js'
 import { addType } from '../utils.js'
@@ -31,15 +30,16 @@ export async function findPlaces(
 ): Promise<GooglePlace[]> {
   assertToken(googlePlacesKey)
 
+  const params = new URLSearchParams({
+    key: googlePlacesKey,
+    input: query,
+    inputtype: 'textquery',
+    locationsbias: `circle:${radius}@${location}`,
+    fields: 'place_id,name,formatted_address,geometry/location',
+  })
   const url =
     'https://maps.googleapis.com/maps/api/place/findplacefromtext/json?' +
-    qs.stringify({
-      key: googlePlacesKey,
-      input: query,
-      inputtype: 'textquery',
-      locationsbias: `circle:${radius}@${location}`,
-      fields: 'place_id,name,formatted_address,geometry/location',
-    })
+    params.toString()
   const res = await fetch(url)
   const json = (await res.json()) as {
     candidates: GooglePlace[]
@@ -108,31 +108,24 @@ export function searchPlaces(
 
   assertToken(googlePlacesKey)
 
-  const params = {
+  const searchParams = new URLSearchParams({
     key: googlePlacesKey,
     location,
-    radius,
-    type,
-    minprice: minPrice,
-    maxprice: maxPrice,
-    pagetoken: pageToken,
-    input: undefined as string | undefined,
-    query: undefined as string | undefined,
-    opennow: undefined as boolean | undefined,
-    rankby: undefined as string | undefined,
-  }
-  params[nearby ? 'input' : 'query'] = query
-  if (openNow) {
-    params.opennow = true
-  }
-  if (nearby) {
-    params.rankby = rankBy
-  }
+    radius: radius.toString(),
+    minPrice: minPrice.toString(),
+    maxPrice: maxPrice.toString(),
+  })
+  searchParams.set(nearby ? 'input' : 'query', query)
+  if (type) searchParams.set('type', type)
+  if (pageToken) searchParams.set('pagetoken', pageToken)
+  if (openNow) searchParams.set('opennow', 'true')
+  if (nearby) searchParams.set('rankby', rankBy)
 
   const endpoint = nearby ? 'nearbysearch' : 'textsearch'
   const url =
     `https://maps.googleapis.com/maps/api/place/${endpoint}/json?` +
-    qs.stringify(params)
+    searchParams.toString()
+
   return (
     fetch(url)
       // TODO: Handle status (= 'INVALID_REQUEST' => retry after 1s)
@@ -155,7 +148,7 @@ export function searchPlaces(
           if (json.status !== 'OK' && json.status !== 'ZERO_RESULTS') {
             throw Object.assign(
               new Error(`searchPlaces: Got status ${json.status}`),
-              { inputData: params },
+              { inputData: Object.fromEntries(searchParams) },
             )
           }
 

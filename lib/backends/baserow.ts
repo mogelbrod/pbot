@@ -40,13 +40,16 @@ export function baserowBackend(config: Config): Backend {
     )
     headers.Accept = 'application/json'
     headers.Authorization = `Token ${cfg.token}`
+    let body: string | undefined = opts.body as any
     if (opts.body && !(opts.body instanceof String)) {
       headers['Content-Type'] = 'application/json'
+      body = JSON.stringify(opts.body)
     }
-    const res = await fetch(
-      cfg.url + path.replace(/^\/api\//, '/'),
-      Object.assign({}, opts, { headers }),
-    )
+    const res = await fetch(cfg.url + path.replace(/^\/api\//, '/'), {
+      ...opts,
+      headers: { ...headers },
+      body,
+    })
     if (!res.ok) {
       const text = await res.text().catch(() => '')
       const err: any = new Error(

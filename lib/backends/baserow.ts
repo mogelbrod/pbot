@@ -26,7 +26,7 @@ export function baserowBackend(config: Config): Backend {
   const cache: Partial<Record<EntityType, any>> = {}
   const inflight: Record<string, Promise<any> | undefined> = {}
 
-  async function requestJSON<Result = any>(
+  async function requestJson<Result = any>(
     path: string,
     opts: {
       method?: string
@@ -74,7 +74,7 @@ export function baserowBackend(config: Config): Backend {
   ): Promise<Record<string, number>> {
     if (tableIds && !reload) return tableIds
     log(`[backend] Retrieving tables list`)
-    const tables = await requestJSON<
+    const tables = await requestJson<
       { id: number; name: string; order: string }[]
     >(`/database/tables/all-tables/`)
     tableIds = {}
@@ -180,7 +180,7 @@ export function baserowBackend(config: Config): Backend {
 
         while (nextPageUrl) {
           log(`[backend] GET ${nextPageUrl}`)
-          const data = await requestJSON<{
+          const data = await requestJson<{
             results: Array<any>
             count: number
             next?: string
@@ -265,12 +265,9 @@ export function baserowBackend(config: Config): Backend {
       table = tableName(table)
       const tableId = await getTableId(table)
       data = omitUnderscored(data)
-      const response = await requestJSON(
+      const response = await requestJson(
         `/database/rows/table/${tableId}/?user_field_names=y`,
-        {
-          method: 'POST',
-          body: JSON.stringify(data),
-        },
+        { method: 'POST', body: data },
       )
       const result = self.parseRecord({ _type: table, ...response })
       cache[table]?.push(result)
@@ -286,12 +283,9 @@ export function baserowBackend(config: Config): Backend {
       table = tableName(table)
       const tableId = await getTableId(table)
       data = omitUnderscored(data)
-      const response = await requestJSON(
+      const response = await requestJson(
         `/database/rows/table/${tableId}/${id}/?user_field_names=y`,
-        {
-          method: 'PATCH',
-          body: JSON.stringify(data),
-        },
+        { method: 'PATCH', body: data },
       )
       const result = self.parseRecord({ _type: table, ...response })
       if (cache[table]) {
@@ -309,7 +303,7 @@ export function baserowBackend(config: Config): Backend {
     async delete(table, id) {
       table = tableName(table)
       const tableId = await getTableId(table)
-      await requestJSON(`/database/rows/table/${tableId}/${id}/`, {
+      await requestJson(`/database/rows/table/${tableId}/${id}/`, {
         method: 'DELETE',
       })
       log(`[backend] Deleted ${table} record ${id}`)

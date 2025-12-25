@@ -27,7 +27,14 @@ describe('format', () => {
       expect(f.escape('*bold*')).toBe('\\*bold\\*')
       expect(f.escape('_italic_')).toBe('\\_italic\\_')
       expect(f.escape('`code`')).toBe('\\`code\\`')
-      // TODO: Test more complex cases
+      expect(f.escape('**bold** and __underline__')).toBe(
+        '\\*\\*bold\\*\\* and \\_\\_underline\\_\\_',
+      )
+      expect(f.escape('~~strikethrough~~')).toBe('\\~\\~strikethrough\\~\\~')
+      expect(f.escape('||spoiler||')).toBe('\\|\\|spoiler\\|\\|')
+      expect(f.escape('`code` and **bold**')).toBe(
+        '\\`code\\` and \\*\\*bold\\*\\*',
+      )
     })
 
     it('should passthrough in basic mode', () => {
@@ -47,14 +54,32 @@ describe('format', () => {
       expect(f.capitalize('hello')).toBe('Hello')
       expect(f.capitalize('HELLO')).toBe('Hello')
       expect(f.capitalize('hELLO')).toBe('Hello')
-      // TODO: Test umlauts and non-ASCII char usage
-      // TODO: Test multi word strings
+    })
+
+    it('should handle umlauts and non-ASCII characters', () => {
+      expect(f.capitalize('über')).toBe('Über')
+      expect(f.capitalize('ÅÄÖÉÈ')).toBe('Åäöéè')
+      expect(f.capitalize('café')).toBe('Café')
+      expect(f.capitalize('москва')).toBe('Москва')
+      expect(f.capitalize('日本')).toBe('日本')
+    })
+
+    it('should handle multi-word strings', () => {
+      expect(f.capitalize('hello world')).toBe('Hello world')
+      expect(f.capitalize('NEW YORK CITY')).toBe('New york city')
+      expect(f.capitalize('múltiple wörds')).toBe('Múltiple wörds')
     })
 
     it('should handle single character strings', () => {
       expect(f.capitalize('a')).toBe('A')
       expect(f.capitalize('Z')).toBe('Z')
-      // TODO: Test umlauts and non-ASCII char usage
+    })
+
+    it('should handle single non-ASCII characters', () => {
+      expect(f.capitalize('ä')).toBe('Ä')
+      expect(f.capitalize('é')).toBe('É')
+      expect(f.capitalize('ñ')).toBe('Ñ')
+      expect(f.capitalize('å')).toBe('Å')
     })
 
     it('should handle strings starting with numbers', () => {
@@ -141,7 +166,12 @@ describe('format', () => {
 
     it('should handle escaped characters in quotes', () => {
       expect(f.tokenize('"hello\\"world"')).toEqual(['hello"world'])
-      // TODO: Check single quotes escaping as well
+    })
+
+    it('should handle escaped characters in single quotes', () => {
+      expect(f.tokenize("'hello\\'world'")).toEqual(["hello'world"])
+      expect(f.tokenize("'a\\\\b'")).toEqual(['a\\b'])
+      expect(f.tokenize("'test\\\"quote'")).toEqual(['test"quote'])
     })
 
     it('should handle empty strings', () => {

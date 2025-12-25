@@ -2,110 +2,117 @@ import fetch from 'node-fetch'
 import Papa from 'papaparse'
 import type { Entity } from './types'
 
-let cachedVkoEntries: Promise<VkoEntries> | undefined
-let cachedTimestamp = 0
+export const vko = {
+  /**
+   * Returns closest VKO entry for the given coordinates.
+   * Uses {@link vko.getEntries} to retrieve dependent data.
+   */
+  async getClosestEntry(
+    lat: number,
+    lng: number,
+    maxDistanceMeters = 10,
+  ): Promise<VkoEntry | undefined> {
+    const data = await vko.getEntries()
+    let closestEntry: VkoEntry | undefined
+    let minDistance = maxDistanceMeters
+    for (const entry of Object.values(data)) {
+      if (isNaN(entry.lat) || isNaN(entry.lng)) {
+        continue
+      }
+      const distance = getDistance(lat, lng, entry.lat, entry.lng)
+      if (distance < minDistance) {
+        minDistance = distance
+        closestEntry = entry
+      }
+    }
+    return closestEntry
+  },
+  cache: undefined as Promise<VkoEntries> | undefined,
+  cacheTimestamp: 0,
+  /** Returns entries, using {@link vko.fetchEntries} to fetch from remote unless already cached. */
+  getEntries(maxAge = 3600e3): Promise<VkoEntries> {
+    if (!vko.cache || Date.now() - vko.cacheTimestamp > maxAge) {
+      vko.cache = vko.fetchEntries()
+    }
+    return vko.cache
+  },
+  /** Reset the cache */
+  resetCache(): void {
+    vko.cache = undefined
+    vko.cacheTimestamp = 0
+  },
+  /** Fetch VKO data from source and process into a table. */
+  async fetchEntries(): Promise<VkoEntries> {
+    vko.cacheTimestamp = Date.now()
 
-/** Returns VKO data table, fetching from source if cache is older than `maxAge`. */
-export function getVkoEntries(maxAge = 3600e3): Promise<VkoEntries> {
-  if (!cachedVkoEntries || Date.now() - cachedTimestamp > maxAge) {
-    cachedVkoEntries = fetchVkoEntries()
-  }
-  return cachedVkoEntries
-}
+    const csvUrl =
+      'https://docs.google.com/spreadsheets/d/149uVBs81T7fyytKBd-caPVkgrle41-q7LqrLB3fGqFU/gviz/tq?tqx=out:csv&sheet=Vadkostarölen.se'
+    const res = await fetch(csvUrl)
+    if (!res.ok) throw new Error('VKO error: ' + res.statusText)
+    const csvText = await res.text()
+    const results = Papa.parse<CSVEntry>(csvText, {
+      skipEmptyLines: true,
+      header: true,
+      transformHeader: (header, index) => header.trim() || `_${index}`,
+    })
 
-/** Fetch VKO data from source and process into a table. */
-export async function fetchVkoEntries(): Promise<VkoEntries> {
-  cachedTimestamp = Date.now()
+    const entries: Record<string, VkoEntry> = {}
 
-  const csvUrl =
-    'https://docs.google.com/spreadsheets/d/149uVBs81T7fyytKBd-caPVkgrle41-q7LqrLB3fGqFU/gviz/tq?tqx=out:csv&sheet=Vadkostarölen.se'
-  const res = await fetch(csvUrl)
-  if (!res.ok) throw new Error('VKO error: ' + res.statusText)
-  const csvText = await res.text()
-  const results = Papa.parse<CSVEntry>(csvText, {
-    skipEmptyLines: true,
-    header: true,
-    transformHeader: (header, index) => header.trim() || `_${index}`,
-  })
+    for (const row of results.data) {
+      const entry: VkoEntry = {
+        _type: 'VkoEntry',
+        barId: row.barId?.trim() || toSlug(row.Bar),
+        name: row.Bar,
+        lat: parseFloat(row.Lat),
+        lng: parseFloat(row.Lng),
+        beerPrice: parseFloat(row.VanligtPris),
+        tags: row.Tags
+          ? row.Tags.split(',').map((t) => t.trim().toLowerCase())
+          : [],
+        happyHour:
+          row.HappyPris || row.Happyframtill
+            ? {
+                from: row.Happyfran || null,
+                to: row.Happyframtill || null,
+                price: row.HappyPris ? parseFloat(row.HappyPris) : null,
+                allDays: (row.HHhelg || '').toLowerCase() === 'ja',
+              }
+            : null,
+        link: row.Links || null,
+        // OpenSun: row.OpenSun,
+        // ClosedSun: row.ClosedSun,
+        // OpenMon: row.OpenMon,
+        // ClosedMon: row.ClosedMon,
+        // OpenTue: row.OpenTue,
+        // ClosedTue: row.ClosedTue,
+        // OpenWed: row.OpenWed,
+        // ClosedWed: row.ClosedWed,
+        // OpenThu: row.OpenThu,
+        // ClosedThu: row.ClosedThu,
+        // OpenFri: row.OpenFri,
+        // ClosedFri: row.ClosedFri,
+        // OpenSat: row.OpenSat,
+        // ClosedSat: row.ClosedSat,
+      }
 
-  const entries: Record<string, VkoEntry> = {}
-
-  for (const row of results.data) {
-    const entry: VkoEntry = {
-      _type: 'VkoEntry',
-      barId: row.barId?.trim() || toSlug(row.Bar),
-      name: row.Bar,
-      lat: parseFloat(row.Lat),
-      lng: parseFloat(row.Lng),
-      beerPrice: parseFloat(row.VanligtPris),
-      tags: row.Tags
-        ? row.Tags.split(',').map((t) => t.trim().toLowerCase())
-        : [],
-      happyHour:
-        row.HappyPris || row.Happyframtill
-          ? {
-              from: row.Happyfran || null,
-              to: row.Happyframtill || null,
-              price: row.HappyPris ? parseFloat(row.HappyPris) : null,
-              allDays: (row.HHhelg || '').toLowerCase() === 'ja',
-            }
-          : null,
-      link: row.Links || null,
-      // OpenSun: row.OpenSun,
-      // ClosedSun: row.ClosedSun,
-      // OpenMon: row.OpenMon,
-      // ClosedMon: row.ClosedMon,
-      // OpenTue: row.OpenTue,
-      // ClosedTue: row.ClosedTue,
-      // OpenWed: row.OpenWed,
-      // ClosedWed: row.ClosedWed,
-      // OpenThu: row.OpenThu,
-      // ClosedThu: row.ClosedThu,
-      // OpenFri: row.OpenFri,
-      // ClosedFri: row.ClosedFri,
-      // OpenSat: row.OpenSat,
-      // ClosedSat: row.ClosedSat,
+      if (!entries[entry.barId]) {
+        entries[entry.barId] = entry
+      } else {
+        entries[entry.barId].rows ||= []
+        entries[entry.barId].rows!.push(entry)
+      }
     }
 
-    if (!entries[entry.barId]) {
-      entries[entry.barId] = entry
-    } else {
-      entries[entry.barId].rows ||= []
-      entries[entry.barId].rows!.push(entry)
-    }
-  }
-
-  cachedTimestamp = Date.now()
-  return entries
-}
-
-/** Returns closest VKO entry for the given coordinates. */
-export async function getClosestVkoEntry(
-  lat: number,
-  lng: number,
-  maxDistanceMeters = 10,
-): Promise<VkoEntry | undefined> {
-  const data = await getVkoEntries()
-  let closestEntry: VkoEntry | undefined
-  let minDistance = maxDistanceMeters
-  for (const entry of Object.values(data)) {
-    if (isNaN(entry.lat) || isNaN(entry.lng)) {
-      continue
-    }
-    const distance = getDistance(lat, lng, entry.lat, entry.lng)
-    if (distance < minDistance) {
-      minDistance = distance
-      closestEntry = entry
-    }
-  }
-  return closestEntry
+    vko.cacheTimestamp = Date.now()
+    return entries
+  },
 }
 
 /**
  * Calculate distance between two lat/long coordinates using the Haversine formula.
  * @returns distance in meters
  */
-function getDistance(
+export function getDistance(
   lat1: number,
   lon1: number,
   lat2: number,

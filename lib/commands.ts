@@ -16,7 +16,7 @@ import type {
 import type { GuildMember } from 'discord.js'
 import { isAdmin, enumValue, placeToSession } from './backend.js'
 import { isPresent, type OmitUnderscored, parseDuration } from './utils.js'
-import { getClosestVkoEntry, getVkoEntries } from './vko.js'
+import { vko } from './vko.js'
 import { drinkType, loadDrinkTypes } from './drink-types.js'
 
 /** Execution context bound for command handlers. */
@@ -367,7 +367,7 @@ command(
         maxPrice: +maxPrice,
         openNow: isOpenNow,
       }),
-      getVkoEntries(),
+      vko.getEntries(),
     ])
     if (rows.length > resultsInt) {
       rows = rows.slice(0, resultsInt)
@@ -389,7 +389,7 @@ command(
       const location = place.geometry?.location
       place.VkoEntry =
         location?.lat && location.lng
-          ? await getClosestVkoEntry(location.lat, location.lng, 10)
+          ? await vko.getClosestEntry(location.lat, location.lng, 10)
           : undefined
     }
     // Prepend with header
@@ -417,7 +417,7 @@ command(
         location: this.config.location!.coords,
         radius: this.config.location!.radius,
       }),
-      getVkoEntries(),
+      vko.getEntries(),
     ])
     const place = places[0]
     if (!place) {
@@ -432,7 +432,7 @@ command(
     const location = place.geometry?.location
     const vkoEntry =
       location?.lat && location.lng
-        ? await getClosestVkoEntry(location.lat, location.lng, 10)
+        ? await vko.getClosestEntry(location.lat, location.lng, 10)
         : null
 
     return [

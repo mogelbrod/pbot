@@ -31,7 +31,16 @@ export function capitalize(v: string): string {
 
 /** Convert value to a log-friendly string. */
 export function stringify(v: any): string {
-  if (typeof v === 'string') return v
+  switch (typeof v) {
+    case 'string':
+      return v
+    case 'number':
+    case 'boolean':
+      return v.toString()
+    case 'undefined':
+      return 'undefined'
+  }
+  if (v === null) return 'null'
   if (v instanceof Error) return v.stack || v.message
   return JSON.stringify(v, null, 2)
 }
@@ -143,7 +152,7 @@ export function fancy(v: unknown, depth = 0): string {
     return str
   }
   if (str.length > 40 || str.indexOf('\n') >= 0) {
-    return '```' + str.replaceAll('```', '\\```') + '```'
+    return '```\n' + str.replaceAll('```', '\\```') + '\n```'
   }
   return wrap('`', str)
 }

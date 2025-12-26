@@ -2,7 +2,7 @@ import { command, toInt } from '../command.js'
 import * as f from '../format.js'
 import { enumValue } from '../backend.js'
 import { drinkType } from '../drink-types.js'
-import { isPresent, parseDuration } from '../utils.js'
+import { isPresent, isTruthy, parseDuration } from '../utils.js'
 import type { Drink, Output, Session } from '../types.js'
 
 export default command(
@@ -12,7 +12,7 @@ export default command(
     const { start, end } = parseDuration(duration)
 
     const [members, sessions, drinks] = await this.backend.tables(
-      false,
+      true,
       'Members',
       'Sessions',
       'Drinks',
@@ -28,49 +28,6 @@ export default command(
     const drinksInWindow = drinks.filter((d) => inWindow(d.Time))
     const drinkToBeerEquivalent = (d: Drink) =>
       d.Volume * drinkType(d).Multiplier
-    const unique = <T>(arr: T[]) => Array.from(new Set(arr))
-
-    const sortMapByValue = (entries: Map<string, number>) => {
-      return Array.from(entries, ([k, v]) => ({ k, v })).sort(
-        (a, b) => b.v - a.v,
-      )
-    }
-
-    const generateTopPlaces = (sessions: Session[]): Output[] => {
-      const sessionsByPlace = new Map<
-        string,
-        { session: Session; sessions: number }
-      >()
-      for (const session of sessions) {
-        if (!session.GooglePlaceID) continue
-        const rec = sessionsByPlace.get(session.GooglePlaceID) || {
-          session,
-          sessions: 0,
-        }
-        rec.sessions += 1
-        sessionsByPlace.set(session.GooglePlaceID, rec)
-      }
-      return Array.from(sessionsByPlace)
-        .sort((a, b) => b[1].sessions - a[1].sessions)
-        .map(([placeId, place], i) => {
-          const { Location, GooglePlaceID } = place.session
-          return [
-            f.linkify(Location, f.placeURL(Location, GooglePlaceID)),
-            `× ${place.sessions}`,
-          ]
-        })
-    }
-
-    const maxDaysGap = (memberDrinks: Drink[]) => {
-      const drinkTimes = memberDrinks
-        .map((d) => new Date(d.Time).getTime())
-        .sort((a, b) => a - b)
-      let maxGap = 0
-      for (let i = 1; i < drinkTimes.length; i++) {
-        maxGap = Math.max(maxGap, drinkTimes[i] - drinkTimes[i - 1])
-      }
-      return Math.floor(maxGap / 86400000)
-    }
 
     const rows: Output[] = [f.italic(`${duration} — stats`)]
 
@@ -79,7 +36,6 @@ export default command(
 
     if (userQuery) {
       const member = await this.backend.member(userQuery)
-      console.log(member)
       const memberDrinks = drinksInWindow.filter((d) =>
         d.Members.some((m) => enumValue(m, true) === member._id),
       )
@@ -88,7 +44,7 @@ export default command(
           .map((d) => enumValue(d.Sessions[0], true))
           .filter(isPresent),
       )
-      let memberCl = 0
+      let totalCl = 0
       let largest: Drink | undefined
       let largestVol = 0
       const byType = new Map<string, number>()
@@ -98,16 +54,13 @@ export default command(
         const vol = drinkToBeerEquivalent(d)
         const volActual = toInt(d['Aggregated Volume']?.split('+')?.[0], vol)
         const sessionId = enumValue(d.Sessions[0], true)
-        memberCl += vol
+        totalCl += vol
         if (!largest || volActual > largestVol) {
           largest = d
           largestVol = volActual
         }
         byType.set(type, (byType.get(type) || 0) + 1)
-        bySession.set(
-          sessionId,
-          (bySession.get(sessionId) || 0) + drinkToBeerEquivalent(d),
-        )
+        bySession.set(sessionId, (bySession.get(sessionId) || 0) + vol)
       }
 
       const sessionsInWindow = memberSessions
@@ -122,8 +75,11 @@ export default command(
         sessionById.get(e.k)!,
         `- ${Math.round(e.v)}cl`,
       ])
+      const topTypes = sortMapByValue(byType).map((e) => [
+        drinkType(e.k),
+        `× ${e.v}`,
+      ])
       const favoritePlace = topPlaces[0]
-      const favoriteType = sortMapByValue(byType)[0]?.k
       const hiatus = maxDaysGap(memberDrinks)
       const sessionForLargest = largest
         ? sessionById.get(enumValue(largest.Sessions[0], true))!
@@ -133,26 +89,22 @@ export default command(
       rows.push(
         f.list(
           [
-            [`🍺 Total beer-eq volume: ${Math.round(memberCl)}cl`],
-            ['🗓 Sessions attended:', memberSessions.length],
-            ['🧭 Venues visited:', unique(placeIds).length],
-            '🔥 Most prolific sessions:',
+            [f.bold('🗓 Sessions attended:'), memberSessions.length],
+            [f.bold(`🍺 Total beer-eq volume:`) + ` ${Math.round(totalCl)}cl`],
+            f.bold('🔥 Most prolific sessions:'),
             f.list(topSessions.slice(0, 5), true),
-            !!favoritePlace && ['🏠 Favorite venue:', favoritePlace],
-            !!byType && [
-              '⭐ Favorite drink:',
-              drinkType(favoriteType),
-              '×',
-              byType.get(favoriteType),
-            ],
+            [f.bold('🧭 Venues visited:'), unique(placeIds).length],
+            !!favoritePlace && [f.bold('📍 Favorite venue:'), favoritePlace],
+            f.bold('🥤 Drinks breakdown:'),
+            f.list(topTypes, true),
             !!largest && [
-              '🏅 Largest drink:',
+              f.bold('🏅 Largest drink:'),
               largest,
               '-',
               sessionForLargest as any,
             ],
-            !!hiatus && `⏳ Longest hiatus: ${hiatus} days`,
-          ].filter(isPresent),
+            hiatus > 0 && [f.bold(`⏳ Longest hiatus:`), `${hiatus} days`],
+          ].filter(isTruthy),
         ),
       )
     } else {
@@ -160,15 +112,17 @@ export default command(
       const bySession = new Map<string, number>()
       const byPlace = new Map<string, { session: Session; drinks: number }>()
       const byType = new Map<string, number>()
+      let totalCl = 0
       for (const d of drinksInWindow) {
-        const volume = drinkToBeerEquivalent(d)
+        const vol = drinkToBeerEquivalent(d)
         const memberId = enumValue(d.Members[0], true)
         const sessionId = enumValue(d.Sessions[0], true)
         const session = sessionById.get(sessionId)
         const placeId = session?.GooglePlaceID
         const type = enumValue(d.Type)
-        byMember.set(memberId, (byMember.get(memberId) || 0) + volume)
-        bySession.set(sessionId, (bySession.get(sessionId) || 0) + volume)
+        totalCl += vol
+        byMember.set(memberId, (byMember.get(memberId) || 0) + vol)
+        bySession.set(sessionId, (bySession.get(sessionId) || 0) + vol)
         byType.set(type, (byType.get(type) || 0) + 1)
         if (placeId && session) {
           const place = byPlace.get(placeId) || { session, drinks: 0 }
@@ -198,16 +152,18 @@ export default command(
       rows.push(
         f.list(
           [
-            ['🏆 Top members:'],
+            [f.bold('🗓 Sessions:'), bySession.size],
+            [f.bold(`🍺 Total beer-eq volume:`) + ` ${Math.round(totalCl)}cl`],
+            [f.bold('🏆 Top members:')],
             f.list(topMembers.slice(0, 5), true),
-            '📈 Busiest sessions:',
+            f.bold('📈 Busiest sessions:'),
             f.list(topSessions.slice(0, 5), true),
-            '📍 Most visited venues:',
+            f.bold('📍 Most visited venues:'),
             f.list(topPlaces.slice(0, 3), true),
-            '🥤 Drinks breakdown:',
+            f.bold('🥤 Drinks breakdown:'),
             f.list(topTypes, true),
-            hiatus > 0 ? `⏳ Longest hiatus: ${hiatus} days` : null,
-          ].filter(isPresent),
+            hiatus > 0 && [f.bold(`⏳ Longest hiatus:`), `${hiatus} days`],
+          ].filter(isTruthy),
         ),
       )
     }
@@ -215,3 +171,45 @@ export default command(
     return rows
   },
 )
+
+const unique = <T>(arr: T[]) => Array.from(new Set(arr))
+
+const sortMapByValue = (entries: Map<string, number>) => {
+  return Array.from(entries, ([k, v]) => ({ k, v })).sort((a, b) => b.v - a.v)
+}
+
+const generateTopPlaces = (sessions: Session[]): Output[] => {
+  const sessionsByPlace = new Map<
+    string,
+    { session: Session; sessions: number }
+  >()
+  for (const session of sessions) {
+    if (!session.GooglePlaceID) continue
+    const rec = sessionsByPlace.get(session.GooglePlaceID) || {
+      session,
+      sessions: 0,
+    }
+    rec.sessions += 1
+    sessionsByPlace.set(session.GooglePlaceID, rec)
+  }
+  return Array.from(sessionsByPlace)
+    .sort((a, b) => b[1].sessions - a[1].sessions)
+    .map(([placeId, place], i) => {
+      const { Location, GooglePlaceID } = place.session
+      return [
+        f.linkify(Location, f.placeURL(Location, GooglePlaceID)),
+        `× ${place.sessions}`,
+      ]
+    })
+}
+
+const maxDaysGap = (memberDrinks: Drink[]) => {
+  const drinkTimes = memberDrinks
+    .map((d) => new Date(d.Time).getTime())
+    .sort((a, b) => a - b)
+  let maxGap = 0
+  for (let i = 1; i < drinkTimes.length; i++) {
+    maxGap = Math.max(maxGap, drinkTimes[i] - drinkTimes[i - 1])
+  }
+  return Math.floor(maxGap / 86400000)
+}

@@ -38,6 +38,15 @@ export function filter<Obj extends Record<string, any>>(
 }
 
 /**
+ * Type guard that removes falsey values from array.
+ */
+export function isTruthy<T>(
+  value: T,
+): value is Exclude<T, null | undefined | '' | false | 0> {
+  return !!value
+}
+
+/**
  * Type guard that removes `null`, `undefined` and empty strings.
  * @example
  * const arr = ['a', 'b', '', null, undefined].filter(isPresent)

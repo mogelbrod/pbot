@@ -36,8 +36,9 @@ export type CommandFn = (
 export const commands: Record<string, { description: string; fn: CommandFn }> =
   {}
 
-export function getCommand(name: string) {
-  return commands[name]
+export async function registerCommands(): Promise<typeof commands> {
+  await import('./commands/index.js')
+  return commands
 }
 
 /**

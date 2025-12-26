@@ -1,11 +1,12 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest'
 import {
   execute,
   commands,
   functionToArgsString,
   type CommandContext,
   type CommandFn,
-} from './commands.js'
+  registerCommands,
+} from './command.js'
 import type { Backend, Config } from './types.js'
 
 function createMockSessions(count: number, includeLocation = false) {
@@ -54,6 +55,8 @@ describe('commands', () => {
   let mockContext: CommandContext
   let mockBackend: Backend
   let mockConfig: Config
+
+  beforeAll(registerCommands)
 
   beforeEach(() => {
     // Create a minimal mock backend

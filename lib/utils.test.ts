@@ -257,4 +257,169 @@ describe('utils', () => {
       })
     })
   })
+
+  describe('isInt()', () => {
+    it('should return true for integer values', () => {
+      expect(u.isInt(0)).toBe(true)
+      expect(u.isInt(1)).toBe(true)
+      expect(u.isInt(-1)).toBe(true)
+      expect(u.isInt(100)).toBe(true)
+    })
+
+    it('should return true for string representations of integers', () => {
+      expect(u.isInt('0')).toBe(true)
+      expect(u.isInt('1')).toBe(true)
+      expect(u.isInt('-1')).toBe(true)
+      expect(u.isInt('100')).toBe(true)
+    })
+
+    it('should return false for non-integer values', () => {
+      expect(u.isInt(1.5)).toBe(false)
+      expect(u.isInt('1.5')).toBe(false)
+      expect(u.isInt('abc')).toBe(false)
+      expect(u.isInt(null)).toBe(false)
+      expect(u.isInt(undefined)).toBe(false)
+      expect(u.isInt(NaN)).toBe(false)
+      expect(u.isInt({})).toBe(false)
+      expect(u.isInt([])).toBe(false)
+    })
+
+    it('should return false for empty strings', () => {
+      expect(u.isInt('')).toBe(false)
+    })
+
+    it('should accept strings with leading/trailing spaces (due to parseInt behavior)', () => {
+      expect(u.isInt(' 1 ')).toBe(true)
+      expect(u.isInt('  42  ')).toBe(true)
+    })
+
+    it('should handle large integers', () => {
+      expect(u.isInt(999999999)).toBe(true)
+      expect(u.isInt('999999999')).toBe(true)
+    })
+  })
+
+  describe('toInt()', () => {
+    it('should parse valid integer strings', () => {
+      expect(u.toInt('0', 10)).toBe(0)
+      expect(u.toInt('42', 10)).toBe(42)
+      expect(u.toInt('-5', 10)).toBe(-5)
+    })
+
+    it('should return the number itself when already an integer', () => {
+      expect(u.toInt(42, 10)).toBe(42)
+      expect(u.toInt(-5, 10)).toBe(-5)
+      expect(u.toInt(0, 10)).toBe(0)
+    })
+
+    it('should return fallback for invalid values', () => {
+      expect(u.toInt('abc', 10)).toBe(10)
+      expect(u.toInt('1.5', 10)).toBe(10)
+      expect(u.toInt(null, 10)).toBe(10)
+      expect(u.toInt(undefined, 10)).toBe(10)
+      expect(u.toInt({}, 10)).toBe(10)
+    })
+
+    it('should return fallback for NaN', () => {
+      expect(u.toInt(NaN, 10)).toBe(10)
+    })
+
+    it('should return fallback for empty string', () => {
+      expect(u.toInt('', 10)).toBe(10)
+    })
+
+    it('should return fallback for floats', () => {
+      expect(u.toInt(1.5, 10)).toBe(10)
+      expect(u.toInt('3.14', 10)).toBe(10)
+    })
+
+    it('should work with different fallback values', () => {
+      expect(u.toInt('invalid', 0)).toBe(0)
+      expect(u.toInt('invalid', -1)).toBe(-1)
+      expect(u.toInt('invalid', 999)).toBe(999)
+    })
+
+    it('should parse strings with spaces (due to parseInt behavior)', () => {
+      expect(u.toInt(' 1 ', 10)).toBe(1)
+      expect(u.toInt('  42  ', 10)).toBe(42)
+    })
+  })
+
+  describe('clamp()', () => {
+    it('should return value when within range', () => {
+      expect(u.clamp(5, 0, 10)).toBe(5)
+      expect(u.clamp(0, -10, 10)).toBe(0)
+      expect(u.clamp(-5, -10, 10)).toBe(-5)
+    })
+
+    it('should return min when value is below range', () => {
+      expect(u.clamp(-5, 0, 10)).toBe(0)
+      expect(u.clamp(-100, -10, 10)).toBe(-10)
+    })
+
+    it('should return max when value is above range', () => {
+      expect(u.clamp(15, 0, 10)).toBe(10)
+      expect(u.clamp(100, -10, 10)).toBe(10)
+    })
+
+    it('should handle negative ranges', () => {
+      expect(u.clamp(-5, -10, -1)).toBe(-5)
+      expect(u.clamp(-15, -10, -1)).toBe(-10)
+      expect(u.clamp(0, -10, -1)).toBe(-1)
+    })
+
+    it('should handle zero boundaries', () => {
+      expect(u.clamp(0, 0, 10)).toBe(0)
+      expect(u.clamp(0, -10, 0)).toBe(0)
+      expect(u.clamp(-1, 0, 10)).toBe(0)
+    })
+
+    it('should handle when min equals max', () => {
+      expect(u.clamp(5, 10, 10)).toBe(10)
+      expect(u.clamp(10, 10, 10)).toBe(10)
+      expect(u.clamp(15, 10, 10)).toBe(10)
+    })
+
+    it('should handle decimal values', () => {
+      expect(u.clamp(5.5, 0, 10)).toBe(5.5)
+      expect(u.clamp(-0.5, 0, 10)).toBe(0)
+      expect(u.clamp(10.5, 0, 10)).toBe(10)
+    })
+
+    it('should handle very large numbers', () => {
+      expect(u.clamp(1000000, 0, 100)).toBe(100)
+      expect(u.clamp(-1000000, -100, 100)).toBe(-100)
+    })
+  })
+
+  describe('rejectError()', () => {
+    it('should return rejected promise with error message', async () => {
+      await expect(u.rejectError('Test error')).rejects.toThrow('Test error')
+    })
+
+    it('should create Error object with message', async () => {
+      try {
+        await u.rejectError('Custom message')
+        expect.fail('Should have thrown')
+      } catch (err: any) {
+        expect(err).toBeInstanceOf(Error)
+        expect(err.message).toBe('Custom message')
+      }
+    })
+
+    it('should handle empty string message', async () => {
+      await expect(u.rejectError('')).rejects.toThrow('')
+    })
+
+    it('should handle long error messages', async () => {
+      const longMessage = 'A'.repeat(1000)
+      await expect(u.rejectError(longMessage)).rejects.toThrow(longMessage)
+    })
+
+    it('should reject immediately', async () => {
+      const promise = u.rejectError('Immediate')
+      expect(promise).toBeInstanceOf(Promise)
+      await expect(promise).rejects.toThrow('Immediate')
+    })
+  })
 })

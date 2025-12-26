@@ -120,3 +120,24 @@ export function parseDuration(spec?: string): {
     end: endDate,
   }
 }
+
+export function isInt(value: any): value is number {
+  // eslint-disable-next-line eqeqeq
+  return parseInt(value, 10) == value
+}
+
+/** Parse value as int, returning fallback if invalid */
+export function toInt(value: any, fallback: number): number {
+  const parsed = parseInt(value, 10)
+  // eslint-disable-next-line eqeqeq
+  return parsed == value ? parsed : fallback
+}
+
+/** Clamps value to [min, value, max] */
+export function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max)
+}
+
+export function rejectError(message: string) {
+  return Promise.reject(new Error(message))
+}

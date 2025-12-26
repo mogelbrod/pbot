@@ -9,7 +9,7 @@ import {
   Partials,
 } from 'discord.js'
 import * as format from './format.js'
-import type { CommandContext } from './commands.js'
+import type { CommandContext } from './command.js'
 import type { Output } from './types.js'
 import { fetchCalendarEvents, type GoogleEvent } from './google/calendar.js'
 

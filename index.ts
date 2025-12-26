@@ -2,7 +2,11 @@
 import path from 'path'
 import { airtableBackend } from './lib/backends/airtable.js'
 import { baserowBackend } from './lib/backends/baserow.js'
-import { execute, type CommandContext } from './lib/commands.js'
+import {
+  execute,
+  registerCommands,
+  type CommandContext,
+} from './lib/command.js'
 import * as format from './lib/format.js'
 import type { Config } from './lib/types.js'
 import { createGoogleAuth } from './lib/google/auth.js'
@@ -44,7 +48,7 @@ function log(...args: any[]) {
 const configPath = path.resolve(options.config)
 
 void import(configPath, { with: { type: 'json' } }).then(
-  (configModule: { default: Config }) => {
+  async (configModule: { default: Config }) => {
     if (!configModule.default || typeof configModule.default !== 'object') {
       throw new Error('Config must be an object')
     }
@@ -90,7 +94,6 @@ void import(configPath, { with: { type: 'json' } }).then(
       baserow: baserowBackend,
       airtable: airtableBackend,
     } as const
-
     const backendFactory = backends[config.backend!]
     if (!backendFactory) {
       throw new Error(
@@ -109,10 +112,14 @@ void import(configPath, { with: { type: 'json' } }).then(
       },
     }
 
-    // Load drink types from backend
-    void loadDrinkTypes(backend).then(() => {
-      log('Loaded drink types')
-    })
+    const initPromises: Promise<unknown>[] = [
+      registerCommands().then((commands) =>
+        log(`Registered ${Object.keys(commands).length} commands`),
+      ),
+      loadDrinkTypes(backend).then(() => {
+        log('Loaded drink types')
+      }),
+    ]
 
     // Configure Google auth if service account is provided
     const googleSA = config.google?.serviceAccount
@@ -121,10 +128,14 @@ void import(configPath, { with: { type: 'json' } }).then(
       delete config.google!.serviceAccount
       const { clientPromise, getToken } = createGoogleAuth(googleSA)
       config.googleAuthToken = getToken
-      clientPromise
-        .then(() => log(`Initialized Google auth`))
-        .catch((error) => log(`Google auth error:`, error))
+      initPromises.push(
+        clientPromise
+          .then(() => log(`Initialized Google auth`))
+          .catch((error) => log(`Google auth error:`, error)),
+      )
     }
+
+    await Promise.all(initPromises)
 
     // CLI mode
     if (args[0] !== 'bot') {
@@ -142,21 +153,20 @@ void import(configPath, { with: { type: 'json' } }).then(
     }
 
     // Bot server mode
-    return import('./lib/bot.js').then(({ startBot }) =>
-      startBot({
-        token: config.discord!.token,
-        defaultChannel: config.discord!.defaultChannel,
-        context,
-        execute,
-        googleCalendar:
-          config.google?.calendarId && config.googleAuthToken
-            ? {
-                calendarId: config.google.calendarId,
-                getToken: config.googleAuthToken,
-                intervalMinutes: 10,
-              }
-            : undefined,
-      }),
-    )
+    const { startBot } = await import('./lib/bot.js')
+    startBot({
+      token: config.discord!.token,
+      defaultChannel: config.discord!.defaultChannel,
+      context,
+      execute,
+      googleCalendar:
+        config.google?.calendarId && config.googleAuthToken
+          ? {
+              calendarId: config.google.calendarId,
+              getToken: config.googleAuthToken,
+              intervalMinutes: 10,
+            }
+          : undefined,
+    })
   },
 )

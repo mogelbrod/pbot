@@ -18,6 +18,24 @@
       "args": [
         "bot"
       ]
+    },
+    {
+      "name": "Start bot (watch mode)",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "tsx",
+      "runtimeArgs": [
+        "watch"
+      ],
+      "console": "internalConsole",
+      "skipFiles": [
+        "<node_internals>/**",
+        "node_modules/**"
+      ],
+      "program": "${workspaceFolder}/index.ts",
+      "args": [
+        "bot"
+      ]
     }
   ]
 }

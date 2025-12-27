@@ -1,5 +1,5 @@
 import { enumValue } from './backend'
-import type { Backend, DrinkType, NestedEnum } from './types'
+import type { Backend, Drink, DrinkType, NestedEnum } from './types'
 
 export type DrinkTypes = Record<string, DrinkType>
 
@@ -13,6 +13,11 @@ export function drinkType(drink: string | { Type: NestedEnum }) {
     drink = enumValue(drink.Type)
   }
   return drinkTypes[drink] || drinkTypes.Unknown
+}
+
+/** Convert a drink to the beer-equivalent volume (cl). */
+export function drinkToBeerEquivalent(d: Drink) {
+  return d.Volume * drinkType(d).Multiplier
 }
 
 /** Re-define drink types. */

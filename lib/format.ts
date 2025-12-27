@@ -68,7 +68,7 @@ export function fancy(v: unknown, depth = 0): string {
         return volume + Emoji
       }
       case 'DrinkTypes': {
-        return `${v.Emoji} ${v.Name} (×${v.Multiplier})`
+        return `${v.Emoji} ${v.Name}` + (depth > 2 ? '' : ` (×${v.Multiplier})`)
       }
       case 'Members':
         return v.Name + (depth < 2 && v.Role ? ` (${enumValue(v.Role)})` : '')

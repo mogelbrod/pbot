@@ -37,6 +37,18 @@ export function filter<Obj extends Record<string, any>>(
   }, {} as Obj)
 }
 
+/** Return array with only unique values. */
+export function unique<T>(arr: T[]) {
+  return Array.from(new Set(arr))
+}
+
+/** Returns array of map entries by value descending. */
+export function sortMapByValue<Key>(
+  entries: Map<Key, number>,
+): Array<{ k: Key; v: number }> {
+  return Array.from(entries, ([k, v]) => ({ k, v })).sort((a, b) => b.v - a.v)
+}
+
 /**
  * Type guard that removes falsey values from array.
  */

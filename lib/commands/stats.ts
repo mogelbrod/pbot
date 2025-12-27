@@ -1,8 +1,14 @@
 import { command, toInt } from '../command.js'
 import * as f from '../format.js'
 import { enumValue } from '../backend.js'
-import { drinkType } from '../drink-types.js'
-import { isPresent, isTruthy, parseDuration } from '../utils.js'
+import { drinkToBeerEquivalent, drinkType } from '../drink-types.js'
+import {
+  isPresent,
+  isTruthy,
+  parseDuration,
+  sortMapByValue,
+  unique,
+} from '../utils.js'
 import type { Drink, Output, Session } from '../types.js'
 
 export default command(
@@ -26,8 +32,6 @@ export default command(
       return t >= start.getTime() && t < end.getTime()
     }
     const drinksInWindow = drinks.filter((d) => inWindow(d.Time))
-    const drinkToBeerEquivalent = (d: Drink) =>
-      d.Volume * drinkType(d).Multiplier
 
     const rows: Output[] = [f.italic(`${duration} — stats`)]
 
@@ -171,12 +175,6 @@ export default command(
     return rows
   },
 )
-
-const unique = <T>(arr: T[]) => Array.from(new Set(arr))
-
-const sortMapByValue = (entries: Map<string, number>) => {
-  return Array.from(entries, ([k, v]) => ({ k, v })).sort((a, b) => b.v - a.v)
-}
 
 const generateTopPlaces = (sessions: Session[]): Output[] => {
   const sessionsByPlace = new Map<

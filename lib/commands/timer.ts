@@ -2,18 +2,21 @@ import ms from 'ms'
 import { command, rejectError } from '../command.js'
 import * as f from '../format.js'
 
-// TODO: Either move this to airtable (yuck) or to the `this` context (requires
-// context to be reused throughout script lifetime)
-const activeTimers: any[] = []
+/** Map of timer ID to timeout handle for cleanup on completion or cancellation. */
+const activeTimers = new Map<number, ReturnType<typeof setTimeout>>()
+let currentTimerId = 0
 
 export default command(
   'timer',
   'Sets a timer (duration=cancel cancels most recent)',
   function (duration = '2h', message = 'Timer ended') {
     if (duration === 'cancel') {
-      const timeout = activeTimers.pop()
+      // Get the most recently added timer (highest ID)
+      const lastTimerId = currentTimerId
+      const timeout = activeTimers.get(lastTimerId)
       if (timeout) {
         clearTimeout(timeout)
+        activeTimers.delete(lastTimerId)
         return 'Cancelled most recent timer'
       } else {
         return 'No timers to cancel'
@@ -26,11 +29,14 @@ export default command(
       return rejectError(`Invalid timer duration ${f.code(duration)}`)
     }
 
+    const timerId = ++currentTimerId
     const timeout = setTimeout(() => {
+      // Clean up the timer from the map when it fires
+      activeTimers.delete(timerId)
       this.output([[message, `(${duration})`]])
     }, milliseconds)
 
-    activeTimers.push(timeout)
+    activeTimers.set(timerId, timeout)
 
     return `Timer set: ${f.bold(duration)}`
   },

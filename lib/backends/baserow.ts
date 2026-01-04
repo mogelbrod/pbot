@@ -1,5 +1,10 @@
 import fetch from 'node-fetch'
-import { LIST_ARGS, RELOADED_TABLES, tableName } from '../backend.js'
+import {
+  LIST_ARGS,
+  RELOADED_TABLES,
+  placeToSession,
+  tableName,
+} from '../backend.js'
 import { findInArray } from '../find-in-array.js'
 import {
   TABLES,
@@ -325,13 +330,7 @@ export function baserowBackend(config: Config): Backend {
       return String(str).replace(/T.+/, '')
     },
 
-    placeToSession(place, session) {
-      if (place) {
-        session.GooglePlaceID = place.place_id
-        session.Address = place.formatted_address
-      }
-      return session
-    },
+    placeToSession,
   }
 
   ensureTableIds()

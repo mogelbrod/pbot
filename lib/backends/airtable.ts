@@ -8,7 +8,12 @@ import {
   type EntityType,
 } from '../types.js'
 import { omitUnderscored } from '../utils.js'
-import { LIST_ARGS, RELOADED_TABLES, tableName } from '../backend.js'
+import {
+  LIST_ARGS,
+  RELOADED_TABLES,
+  placeToSession,
+  tableName,
+} from '../backend.js'
 
 /** Create an Airtable-backed backend. */
 export function airtableBackend(config: Config): Backend {
@@ -213,13 +218,7 @@ export function airtableBackend(config: Config): Backend {
       return str.replace(/T.+/, '')
     },
 
-    placeToSession(place, session) {
-      if (place) {
-        session.GooglePlaceID = place.place_id
-        session.Address = place.formatted_address
-      }
-      return session
-    },
+    placeToSession,
   }
 
   return self
